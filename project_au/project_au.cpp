@@ -245,7 +245,7 @@ Pose calculateTipPose(Pose p) {
 }
 
 
-void showHistogram(char* name, IplImage* image, bool roi = false, int x = 0, int y = 0, int x_l = 0, int y_l = 0) {
+void showHistogram(char* name, IplImage* image, CvPoint point, int x_l = 0, int y_l = 0) {
 
     IplImage* copy_img = cvCloneImage(image);
     
@@ -254,9 +254,9 @@ void showHistogram(char* name, IplImage* image, bool roi = false, int x = 0, int
 
     cvCvtColor(copy_img, img_grayscale, CV_RGB2GRAY);
 
-    if(roi) {
-      cout << "Setting roi to " << x << ":" << y << " with length " << x_l << ":" << y_l << endl;
-      cvSetImageROI(img_grayscale, cvRect(x, y, x_l, y_l));
+    if(x_l != 0 && y_l != 0) {
+      cout << "Setting roi to " << point.x << ":" << point.y << " with length " << x_l << ":" << y_l << endl;
+      cvSetImageROI(img_grayscale, cvRect(point.x, point.y, x_l, y_l));
     }
     int histSize = 256;
 
@@ -271,9 +271,30 @@ void showHistogram(char* name, IplImage* image, bool roi = false, int x = 0, int
     img_hist =  cvCreateHist(1, &histSize, CV_HIST_ARRAY, histRange, 1);
     
     cvCalcHist( &img_grayscale, img_hist, accumulate, NULL );
-    
-    cout << "Having mean of grayscale values for " << name << ": " << cvMean(img_grayscale) << endl;
 
+  double mean_brightness = cvMean(img_grayscale);
+    
+    cout << "Having mean of grayscale values for " << name << ": " << mean_brightness << endl;
+
+  char mean_brightness_string[256];
+  sprintf(mean_brightness_string, "Brightness: %f", mean_brightness);
+  
+  CvFont font;
+  cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5);
+  
+  cvPutText(
+    image, 
+    mean_brightness_string, 
+    point,
+    &font, 
+    cvScalar(127,255,0) // green
+  );
+  
+
+  //free memory. otherwise program will crash after some time with memory hole
+  cvReleaseImage(&img_grayscale);
+  cvReleaseImage(&copy_img);
+  
 }
 
 
@@ -323,7 +344,7 @@ void videocallback(IplImage *image)
     /*
       Create a histogram on the original image
     */
-    showHistogram("Original image", image);
+    showHistogram("Original image", image, cvPoint(0,15), 1, 1);
 
 
     // Start the marker detection loop
@@ -376,9 +397,7 @@ void videocallback(IplImage *image)
           showHistogram(
             "ROI Rene", 
             image, 
-            true, 
-            corner_top_left_x_2d_projected.x, 
-            corner_top_left_x_2d_projected.y, 
+            corner_top_left_x_2d_projected, 
             abs(corner_top_left_x_2d_projected.x-corner_bottom_right_2d_projected.x), //width
             abs(corner_top_left_x_2d_projected.y-corner_bottom_right_2d_projected.y) //height
           );
@@ -408,12 +427,12 @@ void videocallback(IplImage *image)
           showHistogram(
             "ROI Puya", 
             image, 
-            true, 
-            corner_top_left_x_2d_projected.x, 
-            corner_top_left_x_2d_projected.y, 
+            corner_top_left_x_2d_projected, 
             abs(corner_top_left_x_2d_projected.x-corner_bottom_right_2d_projected.x), //width
             abs(corner_top_left_x_2d_projected.y-corner_bottom_right_2d_projected.y) //height
           );
+     
+
 
         }
 
@@ -521,6 +540,8 @@ void videocallback(IplImage *image)
         cvFlip(image);
         image->origin = !image->origin;
     }
+
+
 }
 
 
