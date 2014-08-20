@@ -1,0 +1,6 @@
+---------------
+script:    generate.sh
+arguments:  
+directory: /home/roboto/Downloads/alvar-master/build
+---------------
+[2014/05/23-19:41:43] compiler parameter not specified

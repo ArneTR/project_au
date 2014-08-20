@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/roboto/Downloads/alvar-master/src/platform/CaptureFactory_private.h
+vector
+-
+map
+-
+string
+-
+Plugin.h
+/home/roboto/Downloads/alvar-master/src/platform/Plugin.h
+
+/home/roboto/Downloads/alvar-master/src/platform/CaptureFactory_unix.cpp
+CaptureFactory_private.h
+/home/roboto/Downloads/alvar-master/src/platform/CaptureFactory_private.h
+stdlib.h
+-
+unistd.h
+-
+
+/home/roboto/Downloads/alvar-master/src/platform/Plugin.h
+Alvar.h
+/home/roboto/Downloads/alvar-master/src/platform/Alvar.h
+string
+-
+
+src/Alvar.h
+

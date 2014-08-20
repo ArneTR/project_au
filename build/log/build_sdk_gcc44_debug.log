@@ -1,0 +1,37 @@
+---------------
+script:    build.sh
+arguments: sdk gcc44 debug no-doc experimental
+directory: /home/roboto/Downloads/alvar-master/build
+---------------
+[2014/05/23-19:41:50] creating build directory
+[2014/05/23-19:41:50] generating build environment
+-- The C compiler identification is unknown
+-- The CXX compiler identification is unknown
+-- Check for working C compiler: /usr/bin/gcc-4.4
+CMake Error: your C compiler: "/usr/bin/gcc-4.4" was not found.   Please set CMAKE_C_COMPILER to a valid compiler path or name.
+CMake Error: Internal CMake error, TryCompile configure of cmake failed
+-- Check for working C compiler: /usr/bin/gcc-4.4 -- broken
+CMake Error at /usr/share/cmake-2.8/Modules/CMakeTestCCompiler.cmake:61 (message):
+  The C compiler "/usr/bin/gcc-4.4" is not able to compile a simple test
+  program.
+
+  It fails with the following output:
+
+   
+
+  
+
+  CMake will not be able to correctly generate this project.
+Call Stack (most recent call first):
+  CMakeLists.txt:10 (project)
+
+
+CMake Error: your C compiler: "/usr/bin/gcc-4.4" was not found.   Please set CMAKE_C_COMPILER to a valid compiler path or name.
+CMake Error: your CXX compiler: "/usr/bin/g++-4.4" was not found.   Please set CMAKE_CXX_COMPILER to a valid compiler path or name.
+-- Configuring incomplete, errors occurred!
+See also "/home/roboto/Downloads/alvar-master/build/build_sdk_gcc44_debug/CMakeFiles/CMakeOutput.log".
+See also "/home/roboto/Downloads/alvar-master/build/build_sdk_gcc44_debug/CMakeFiles/CMakeError.log".
+[2014/05/23-19:41:50] compiling
+make: *** No rule to make target `install'.  Stop.
+[2014/05/23-19:41:50] running tests and uploading to dashboard
+make: *** No rule to make target `Experimental'.  Stop.

@@ -1,0 +1,9 @@
+---------------
+script:    package.sh
+arguments: sdk gcc44
+directory: /home/roboto/Downloads/alvar-master/build
+---------------
+[2014/05/23-19:41:50] packaging
+CPack Error: CPack generator not specified
+[2014/05/23-19:41:50] moving package
+mv: cannot stat ‘*.gz’: No such file or directory

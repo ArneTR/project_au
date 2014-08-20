@@ -1,0 +1,15 @@
+---------------
+script:    master.sh
+arguments:  
+directory: /home/roboto/Downloads/alvar-master/build
+---------------
+[2014/05/23-19:41:49] alvar master build script
+[2014/05/23-19:41:49] building sdk-gcc43-debug
+[2014/05/23-19:41:49] building sdk-gcc43-release
+[2014/05/23-19:41:49] pakcaging sdk-gcc43
+[2014/05/23-19:41:50] building sdk-gcc44-debug
+[2014/05/23-19:41:50] building sdk-gcc44-release
+[2014/05/23-19:41:50] pakcaging sdk-gcc44
+[2014/05/23-19:41:50] building bin-gcc44-release
+[2014/05/23-19:41:50] pakcaging bin-gcc44
+[2014/05/23-19:41:50] done, 00:00:01
