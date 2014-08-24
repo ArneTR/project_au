@@ -1,5 +1,11 @@
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 
-
+  #include <winsock2.h>
+  #pragma comment( lib, "ws2_32.lib" )
+  #define WINDOWS_SOCKETS 1
+#else
+  #define WINDOWS_SOCKETS 0
+#endif
 #define APP_SOCKET_PORT 11113
 
 #define PENCIL_LENGTH 50.0 // should be 146.0 later on
@@ -14,10 +20,6 @@
 #include "Shared.h"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-
-// include stuff for sending the POSE via mobile and also for managing sockets
-#include "network.hpp"
-#include "network.cpp"
 
 #include "pose.cpp"
 
@@ -44,13 +46,13 @@ bool activate_glutviewer = true; // will open two additional windows showing det
 
 bool show_single_pose = true;
 
-bool send_pose = false;
+bool send_pose = true;
 
 bool show_average_pose = true;
 
-bool create_roi_rene = true;
+bool create_roi_rene = false;
 
-bool create_roi_puya = true;
+bool create_roi_puya = false;
 
 bool calculate_robot_pose = true;
 
@@ -142,7 +144,7 @@ void videocallback(IplImage *image)
         
         int id = (*(marker_detector.markers))[i].GetId();
         
-        if(id == 0) { // we detected the 0 marker. Now we try to ready from the stream
+        if(id == 10) { // we detected the 0 marker. Now we try to ready from the stream
 
           Pose zero_marker_pose = (*(marker_detector.markers))[i].pose; // get pose
 
@@ -151,22 +153,30 @@ void videocallback(IplImage *image)
           //cout << "Current Translation of ZERO marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << endl;
           //cout << "Current Quaternion of ZERO marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << endl;
 
-          //cout << "Checking stream for tip pose" << endl;
-          int *stream_buffer = new int[sizeof(SIMPLE_POSE)];
-          int n = read(server_socket, stream_buffer,sizeof(SIMPLE_POSE));
+          cout << "Checking stream for tip pose" << endl;
+          int stream_buffer_size = sizeof(int)*8;
+          char *stream_buffer = new char[stream_buffer_size];
+          int n = recv(server_socket, stream_buffer,stream_buffer_size, 0);
+
 
           if (n < 0) cout << "ERROR reading from socket" << endl;
+      else cout << "Read " << n << "bytes from socket" << endl;
+      // cast the buffer to int
+      int* stream_data = (int *)stream_buffer;
+
 
             //rebuild pose
             SIMPLE_POSE aktpos;
-            aktpos.type = stream_buffer[0];
-            aktpos.x = ntohl(stream_buffer[1]) / 1000;
-            aktpos.y = ntohl(stream_buffer[2]) / 1000;
-            aktpos.z = ntohl(stream_buffer[3]) / 1000;
-            aktpos.R = ntohl(stream_buffer[4]) / 1000;
-            aktpos.i1 = ntohl(stream_buffer[5]) / 1000;
-            aktpos.i2 = ntohl(stream_buffer[6]) / 1000;
-            aktpos.i3 = ntohl(stream_buffer[7]) / 1000;
+            aktpos.type = (int) ntohl(stream_data[0]);
+      
+      aktpos.x = ((int) ntohl(stream_data[1])) / 1000.0;
+      aktpos.y = ((int) ntohl(stream_data[2])) / 1000.0;
+            aktpos.z = ((int) ntohl(stream_data[3])) / 1000.0;
+            aktpos.R = ((int) ntohl(stream_data[4])) / 1000.0;
+            aktpos.i1 = ((int) ntohl(stream_data[5])) / 1000.0;
+            aktpos.i2 = ((int) ntohl(stream_data[6])) / 1000.0;
+            aktpos.i3 = ((int) ntohl(stream_data[7])) / 1000.0;
+
             printf("Received: X %f\n", aktpos.x);
             printf("Received: Y %f\n", aktpos.y);
             printf("Received: Z %f\n", aktpos.z);
@@ -255,6 +265,22 @@ int main(int argc, char *argv[])
         std::cout << "  q: quit" << std::endl;
         std::cout << std::endl;
 
+    
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+
+      //Socket erstellen
+      static bool socketsStarted = false;
+
+      if (! socketsStarted)
+      {
+        socketsStarted = true;
+
+        WSADATA wsaData;
+        const WORD wVersionRequested = MAKEWORD (2, 2); // current possible highest ist 2,2
+        WSAStartup (wVersionRequested, &wsaData); // initalize socket usage for program
+      }
+    #endif
+
 
         //connect to server
         struct sockaddr_in serv_addr;
@@ -262,25 +288,27 @@ int main(int argc, char *argv[])
         
         server_socket = socket(AF_INET, SOCK_STREAM, 0);
         
-        server = gethostbyname("192.168.178.22");
+    cout << "Connecting to 192.168.178.67" << endl;
+        server = gethostbyname("192.168.178.67");
         if (server == NULL) {
             fprintf(stderr,"ERROR, no such host\n");
             exit(0);
         }
         
-        bzero((char *) &serv_addr, sizeof(serv_addr));
+        memset((char *) &serv_addr, 0, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
-        bcopy((char *)server->h_addr, 
-             (char *)&serv_addr.sin_addr.s_addr,
-             server->h_length);
+    memmove( (char *)&serv_addr.sin_addr.s_addr,
+            (char *)server->h_addr, 
+      server->h_length);
         serv_addr.sin_port = htons(APP_SOCKET_PORT);
       
         if (connect(server_socket,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
-            cout << "ERROR connecting" << endl;
-            perror("Error connecting");
+            if(WINDOWS_SOCKETS) cout << "Error with WSA " << WSAGetLastError() << endl;
+      else perror("Error connecting");
             return 0;
         } else {
           cout << "Connect Succesful" << endl;
+      shutdown(server_socket, SD_SEND);
 
         }
 
