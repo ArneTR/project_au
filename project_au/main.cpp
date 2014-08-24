@@ -1,4 +1,7 @@
-
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+  #include <winsock2.h>
+  #pragma comment( lib, "ws2_32.lib" )
+#endif
 
 #define APP_SOCKET_PORT 11113
 
@@ -8,6 +11,8 @@
 #define MARKER_RESOLUTION 5
 #define MARKER_MARGIN 1.0
 
+#define ROBOT_MARKER 10
+
 #include "CvTestbed.h"
 #include "MarkerDetector.h"
 #include "GlutViewer.h"
@@ -16,6 +21,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 // include stuff for sending the POSE via mobile and also for managing sockets
+#include "network.hpp"
 #include "network.cpp"
 
 #include "roi.cpp"
@@ -38,7 +44,6 @@ using namespace alvar;
 using namespace std;
 
 
-
 bool initial_calibrate = true; // will load calibration XML file
 
 bool activate_glutviewer = true; // will open two additional windows showing detected markers in cartesian space
@@ -49,15 +54,12 @@ bool send_pose = true;
 
 bool show_average_pose = true;
 
-bool create_roi_rene = true;
+bool create_roi_rene = false;
 
-bool create_roi_puya = true;
+bool create_roi_puya = false;
 
 bool calculate_robot_pose = true;
 
-bool avg_pose_relative_to_robot_calculated = false;
-
-bool marker_detected = false;
 
 int counter = 1 ;
 
@@ -136,13 +138,18 @@ void videocallback(IplImage *image)
     Pose avg_pose;
     avg_pose.Reset(); // fresh start
 
-    marker_detected = false;
+  Pose robot_pose;
+  robot_pose.Reset();
+
+    bool marker_detected = false;
+  bool robot_marker_detected = false;
 
     
     /*
       Create a histogram on the original image
     */
-    showHistogram("Original image", image, cvPoint(0,15), 1, 1);
+  if(create_roi_rene || create_roi_puya)
+      showHistogram("Original image", image, cvPoint(0,15), 1, 1);
 
 
     // Start the marker detection loop
@@ -152,11 +159,12 @@ void videocallback(IplImage *image)
 
         int id = (*(marker_detector.markers))[i].GetId();
 
+
+
         Pose current_pose = (*(marker_detector.markers))[i].pose; // get pose
-        
         if(show_single_pose) showPose(i, id, current_pose, d);
 
-        SIMPLE_POSE sp = getSimplePose(current_pose);
+    SIMPLE_POSE sp = getSimplePose(current_pose);
             
         cout << "Current Translation of marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << endl;
         cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << endl;
@@ -165,40 +173,34 @@ void videocallback(IplImage *image)
 
         if(create_roi_puya) createROI("ROI Puya", image, cam, current_pose, MARKER_SIZE/2 +2, MARKER_SIZE/2 -4, 0, -(MARKER_SIZE)/2 +2,MARKER_SIZE/2 + 14,0.0);
 
-        if(show_average_pose) { // average poses
-          if(marker_detected) { // we found at least one marker before, so we must average
-            Pose temp_pose = calculateTipPose(current_pose);
+        if(marker_detected) { // we found at least one marker before, so we must average
+      Pose temp_pose = calculateTipPose(current_pose);
             
-            CvMat *temp_translation = cvCreateMat(3, 1, CV_64FC1);
-            CvMat *avg_translation = cvCreateMat(3, 1, CV_64FC1);
+      CvMat *temp_translation = cvCreateMat(3, 1, CV_64FC1);
+      CvMat *avg_translation = cvCreateMat(3, 1, CV_64FC1);
 
-            avg_pose.GetTranslation(avg_translation);
-            temp_pose.GetTranslation(temp_translation);
+      avg_pose.GetTranslation(avg_translation);
+      temp_pose.GetTranslation(temp_translation);
 
 
-            avg_pose.SetTranslation( 
-              (cvmGet(temp_translation,0,0) + cvmGet(avg_translation,0,0)) / 2,
-              (cvmGet(temp_translation,1,0) + cvmGet(avg_translation,1,0)) / 2,
-              (cvmGet(temp_translation,2,0) + cvmGet(avg_translation,2,0)) / 2 
-            );
+      avg_pose.SetTranslation( 
+        (cvmGet(temp_translation,0,0) + cvmGet(avg_translation,0,0)) / 2,
+        (cvmGet(temp_translation,1,0) + cvmGet(avg_translation,1,0)) / 2,
+        (cvmGet(temp_translation,2,0) + cvmGet(avg_translation,2,0)) / 2 
+      );
 
             
             
-          } else { // first marker found. Just apply current pose and move to cube center
-            avg_pose = calculateTipPose(current_pose);
-          }
-          
+        } else { // first marker found. Just apply current pose and move to cube center
+      avg_pose = calculateTipPose(current_pose);
         }
         
-        
-        
-        if(id != 0) marker_detected = true; // first of many (or last) run finished. We set the flag.
-        else if(marker_detected && calculate_robot_pose) {
-          avg_pose_relative_to_robot_calculated = true;
-          avg_pose_relative_to_robot = calculateRobotPose(current_pose, avg_pose);
-          cout << "Detected 0 marker!" << endl;
-        }
-
+        // set the flag if first (or another) marker was detected OR robot marker was detected
+    if(id == ROBOT_MARKER) {
+      robot_marker_detected = true;
+      robot_pose = current_pose;
+      cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << endl;
+    } else marker_detected = true;
     } // end loop markers
 
     SIMPLE_POSE sp2 = getSimplePose(avg_pose);
@@ -215,31 +217,21 @@ void videocallback(IplImage *image)
 
     }
 
-    if(counter % 100 == 0) {
-     cout << "ok" << endl;
-     counter++;
-     // send the pose via network
-      if(avg_pose_relative_to_robot_calculated) {
+    if(marker_detected && robot_marker_detected && calculate_robot_pose) {
         
-        cout << "Sending robot pose" << endl; 
+    avg_pose_relative_to_robot = calculateRobotPose(robot_pose, avg_pose);     
         
-
-        SIMPLE_POSE aktpos = getSimplePose(avg_pose_relative_to_robot);
+    cout << "Sending robot pose" << endl; 
         
-        cout << "Current Translation of robot pose is (X,Y,Z): (" << aktpos.x << ", " << aktpos.y << ", " << aktpos.z << ")" << endl;
-        cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << endl;
+    SIMPLE_POSE aktpos = getSimplePose(avg_pose_relative_to_robot);
+        
+    cout << "Current Translation of robot pose is (X,Y,Z): (" << aktpos.x << ", " << aktpos.y << ", " << aktpos.z << ")" << endl;
+    cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << endl;
     
-        aktpos.type = 1;
-        sendPos2Mobile(app_socket, aktpos);
-        cvWaitKey(3000);
-      }
-    } else {
-     cout << "Counter is " << counter++ << endl;
+    aktpos.type = 1;
+    sendPos2Mobile(app_socket, aktpos);
+    //cvWaitKey(3000);
     }
-
-    
-
-
 
     if (flip_image) {
         cvFlip(image);
@@ -256,7 +248,7 @@ int main(int argc, char *argv[])
         // Output usage message
         std::string filename(argv[0]);
         filename = filename.substr(filename.find_last_of('\\') + 1);
-        std::cout << "Project AU 5" << std::endl;
+        std::cout << "Project AU 23.08.2014" << std::endl;
         std::cout << "====================" << std::endl;
         std::cout << std::endl;
         std::cout << "Description:" << std::endl;
