@@ -1,0 +1,45 @@
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+  #include <winsock2.h>
+  #pragma comment( lib, "ws2_32.lib" )
+#else
+  typedef int SOCKET;  
+
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <sys/un.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <netdb.h>
+  #include <errno.h>
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <unistd.h>
+  #include <string.h>
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <netdb.h> 
+
+
+#endif
+
+#include <cctype>
+#include <cstdlib>
+#include <stdio.h>
+#include <errno.h>
+#include <iostream>
+#include <stdio.h>
+
+#include "tools.hpp"
+
+
+
+#define X 0
+#define Y 1
+#define Z 2
+
+using namespace std;
+
+SOCKET createsocket(unsigned int socket_port);
+
+void sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos);
