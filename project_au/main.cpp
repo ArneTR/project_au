@@ -11,7 +11,7 @@
 #define MARKER_RESOLUTION 5
 #define MARKER_MARGIN 1.0
 
-#define ROBOT_MARKER 10
+#define ROBOT_MARKER 0
 
 #include "CvTestbed.h"
 #include "MarkerDetector.h"
@@ -222,7 +222,9 @@ void videocallback(IplImage *image)
       // first we need to calculate the transformation Matrix to get from the zero_marker to the pencil_tip
       // logic is: Cam1->ZeroMarker * ZeroMarker->PencilTip = Cam1->PencilTip
       // => (Cam1->ZeroMarker)^-1 * Cam1->PencilTip = ZeroMarker->PencilTip
-        
+      Pose avg_pose_relative_to_robot_marker;
+    avg_pose_relative_to_robot_marker.Reset();
+
       avg_pose_relative_to_robot_marker = calculatePoseRelativeToRobotMarker(robot_marker_pose, avg_pose);     
           
       cout << "Sending robot pose" << endl; 
