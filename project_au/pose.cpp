@@ -69,53 +69,51 @@ Pose calculateTipPose(Pose p) {
     return tip_pose;
 }
 
-Pose calculateRobotPose(Pose zero_marker_pose, Pose tip_pose_original) {
+Pose calculatePoseRelativeToRobotMarker(Pose robot_marker_pose, Pose p) {
     
-    Pose tip_pose = tip_pose_original; // makes a copy
+    Pose pose = p; // makes a copy, just in case
     
-    CvMat *zero_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
-    zero_marker_pose.GetMatrix(zero_marker_matrix); // load current rotation in empty matrix
+    CvMat *robot_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
+    CvMat *inv_robot_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
+    robot_marker_pose.GetMatrix(robot_marker_matrix); // load current rotation in empty matrix
 
-    CvMat *tip_matrix = cvCreateMat(4, 4, CV_64FC1);
-    tip_pose.GetMatrix(tip_matrix); // get current tip matrix (should be empty after reset)
+    CvMat *pose_matrix = cvCreateMat(4, 4, CV_64FC1);
+    pose.GetMatrix(pose_matrix); 
 
     CvMat *result = cvCreateMat(4,4, CV_64FC1);
 
-    // note that sequence of multiplication matters
-    // If you multiply current with tip, then the movement of the tip done earlier will be assumend
-    // in the markers inherent coordinate system
-    //
-    // if you multiply tip with current then the translation will be done in reference to the camera
-    cvMatMul(zero_marker_matrix, tip_matrix, result);
+    // Calculate inverse to get 0->Cam1 from Cam1->0
+    cvInv(robot_marker_matrix, inv_robot_marker_matrix, CV_LU);
 
-    tip_pose.SetMatrix(result);
 
-    return tip_pose;
+    // now calcualte 0->Cam1 * C1->M = 0->M
+    cvMatMul(inv_robot_marker_matrix, pose_matrix, result);
+
+    pose.SetMatrix(result);
+
+    return pose;
 }
 
-Pose calculateInverseRobotPose(Pose zero_marker_pose, Pose tip_pose_original) {
+Pose transformPoseRelativeToCam(Pose robot_marker_pose, Pose p) {
     
-    Pose tip_pose = tip_pose_original; // makes a copy
+    Pose transformation_pose = p; // makes a copy, just in case
     
-    CvMat *zero_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
-    zero_marker_pose.GetMatrix(zero_marker_matrix); // load current rotation in empty matrix
+    CvMat *robot_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
+    robot_marker_pose.GetMatrix(robot_marker_matrix); // load current rotation in empty matrix
 
-    CvMat *tip_matrix = cvCreateMat(4, 4, CV_64FC1);
-    tip_pose.GetMatrix(tip_matrix); // get current tip matrix (should be empty after reset)
+    CvMat *transformation_pose_matrix = cvCreateMat(4, 4, CV_64FC1);
+    transformation_pose.GetMatrix(transformation_pose_matrix); 
 
     CvMat *result = cvCreateMat(4,4, CV_64FC1);
 
-    // note that sequence of multiplication matters
-    // If you multiply current with tip, then the movement of the tip done earlier will be assumend
-    // in the markers inherent coordinate system
-    //
-    // if you multiply tip with current then the translation will be done in reference to the camera
-    cvMatMul(tip_matrix, zero_marker_matrix, result);
+    // now calcualte Cam2->0 * 0->M = Cam2->M
+    cvMatMul(robot_marker_matrix, transformation_pose_matrix, result);
 
-    tip_pose.SetMatrix(result);
+    transformation_pose.SetMatrix(result);
 
-    return tip_pose;
+    return transformation_pose;
 }
+
 
 void markTip(IplImage *image, Camera cam, Pose avg_pose) {
   CvPoint3D32f point_3d = cvPoint3D32f(0.0,0.0,0); // move one half marker size to the center of the cube

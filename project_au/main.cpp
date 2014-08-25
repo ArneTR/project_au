@@ -138,8 +138,8 @@ void videocallback(IplImage *image)
     Pose avg_pose;
     avg_pose.Reset(); // fresh start
 
-  Pose robot_pose;
-  robot_pose.Reset();
+  Pose robot_marker_pose;
+  robot_marker_pose.Reset();
 
     bool marker_detected = false;
   bool robot_marker_detected = false;
@@ -198,7 +198,7 @@ void videocallback(IplImage *image)
         // set the flag if first (or another) marker was detected OR robot marker was detected
     if(id == ROBOT_MARKER) {
       robot_marker_detected = true;
-      robot_pose = current_pose;
+      robot_marker_pose = current_pose;
       cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << endl;
     } else marker_detected = true;
     } // end loop markers
@@ -218,19 +218,23 @@ void videocallback(IplImage *image)
     }
 
     if(marker_detected && robot_marker_detected && calculate_robot_pose) {
+
+      // first we need to calculate the transformation Matrix to get from the zero_marker to the pencil_tip
+      // logic is: Cam1->ZeroMarker * ZeroMarker->PencilTip = Cam1->PencilTip
+      // => (Cam1->ZeroMarker)^-1 * Cam1->PencilTip = ZeroMarker->PencilTip
         
-    avg_pose_relative_to_robot = calculateRobotPose(robot_pose, avg_pose);     
-        
-    cout << "Sending robot pose" << endl; 
-        
-    SIMPLE_POSE aktpos = getSimplePose(avg_pose_relative_to_robot);
-        
-    cout << "Current Translation of robot pose is (X,Y,Z): (" << aktpos.x << ", " << aktpos.y << ", " << aktpos.z << ")" << endl;
-    cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << endl;
-    
-    aktpos.type = 1;
-    sendPos2Mobile(app_socket, aktpos);
-    //cvWaitKey(3000);
+      avg_pose_relative_to_robot_marker = calculatePoseRelativeToRobotMarker(robot_marker_pose, avg_pose);     
+          
+      cout << "Sending robot pose" << endl; 
+          
+      SIMPLE_POSE aktpos = getSimplePose(avg_pose_relative_to_robot_marker);
+          
+      cout << "Current Translation of robot pose is (X,Y,Z): (" << aktpos.x << ", " << aktpos.y << ", " << aktpos.z << ")" << endl;
+      cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << endl;
+      
+      aktpos.type = 1;
+      sendPos2Mobile(app_socket, aktpos);
+      //cvWaitKey(3000);
     }
 
     if (flip_image) {

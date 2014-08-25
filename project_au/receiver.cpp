@@ -160,58 +160,62 @@ void videocallback(IplImage *image)
 
 
           if (n < 0) cout << "ERROR reading from socket" << endl;
-      else cout << "Read " << n << "bytes from socket" << endl;
-      // cast the buffer to int
-      int* stream_data = (int *)stream_buffer;
+          else cout << "Read " << n << "bytes from socket" << endl;
+          // cast the buffer to int
+          int* stream_data = (int *)stream_buffer;
 
 
-            //rebuild pose
-            SIMPLE_POSE aktpos;
-            aktpos.type = (int) ntohl(stream_data[0]);
-      
-      aktpos.x = ((int) ntohl(stream_data[1])) / 1000.0;
-      aktpos.y = ((int) ntohl(stream_data[2])) / 1000.0;
-            aktpos.z = ((int) ntohl(stream_data[3])) / 1000.0;
-            aktpos.R = ((int) ntohl(stream_data[4])) / 1000.0;
-            aktpos.i1 = ((int) ntohl(stream_data[5])) / 1000.0;
-            aktpos.i2 = ((int) ntohl(stream_data[6])) / 1000.0;
-            aktpos.i3 = ((int) ntohl(stream_data[7])) / 1000.0;
+          //rebuild pose
+          SIMPLE_POSE aktpos;
+          aktpos.type = (int) ntohl(stream_data[0]);
+    
+          aktpos.x = ((int) ntohl(stream_data[1])) / 1000.0;
+          aktpos.y = ((int) ntohl(stream_data[2])) / 1000.0;
+          aktpos.z = ((int) ntohl(stream_data[3])) / 1000.0;
+          aktpos.R = ((int) ntohl(stream_data[4])) / 1000.0;
+          aktpos.i1 = ((int) ntohl(stream_data[5])) / 1000.0;
+          aktpos.i2 = ((int) ntohl(stream_data[6])) / 1000.0;
+          aktpos.i3 = ((int) ntohl(stream_data[7])) / 1000.0;
 
-            printf("Received: X %f\n", aktpos.x);
-            printf("Received: Y %f\n", aktpos.y);
-            printf("Received: Z %f\n", aktpos.z);
-            printf("Received: X0 %f\n", aktpos.R);
-            printf("Received: X1 %f\n", aktpos.i1);
-            printf("Received: X2 %f\n", aktpos.i2);
-            printf("Received: X3 %f\n", aktpos.i3);
+          printf("Received: X %f\n", aktpos.x);
+          printf("Received: Y %f\n", aktpos.y);
+          printf("Received: Z %f\n", aktpos.z);
+          printf("Received: X0 %f\n", aktpos.R);
+          printf("Received: X1 %f\n", aktpos.i1);
+          printf("Received: X2 %f\n", aktpos.i2);
+          printf("Received: X3 %f\n", aktpos.i3);
 
-            Pose tip_pose = zero_marker_pose;
-            tip_pose.Reset();
+          Pose tip_pose;
+          tip_pose.Reset();
 
-            tip_pose = calculateRobotPose(zero_marker_pose, tip_pose);
-            tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
-              aktpos.x, 
-              aktpos.y,
-              aktpos.z
-            );
+          tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
+            aktpos.x, 
+            aktpos.y,
+            aktpos.z
+          );
 
-            showPoseCoordinates(image, cam, tip_pose, aktpos);
+          //TODO: Set quaternion!!!
 
-            showPose(2, 33, tip_pose, d);
-        /*
-            tip_pose.Reset();
+          tip_pose = transformPoseRelativeToCam(zero_marker_pose, tip_pose);
+          
 
-            tip_pose = calculateInverseRobotPose(zero_marker_pose, tip_pose);
-            tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
-              aktpos.x, 
-              aktpos.y,
-              aktpos.z
-            );
+          showPoseCoordinates(image, cam, tip_pose, aktpos);
 
-            showPoseCoordinates(image, cam, zero_marker_pose, aktpos);
+          showPose(2, 33, tip_pose, d);
+      /*
+          tip_pose.Reset();
 
-            showPose(3, 66, tip_pose, d);
-        */
+          tip_pose = calculateInverseRobotPose(zero_marker_pose, tip_pose);
+          tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
+            aktpos.x, 
+            aktpos.y,
+            aktpos.z
+          );
+
+          showPoseCoordinates(image, cam, zero_marker_pose, aktpos);
+
+          showPose(3, 66, tip_pose, d);
+      */
         }
 
 
