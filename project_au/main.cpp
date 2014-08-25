@@ -138,69 +138,72 @@ void videocallback(IplImage *image)
     Pose avg_pose;
     avg_pose.Reset(); // fresh start
 
-  Pose robot_marker_pose;
-  robot_marker_pose.Reset();
+    Pose robot_marker_pose;
+    robot_marker_pose.Reset();
 
     bool marker_detected = false;
-  bool robot_marker_detected = false;
+    bool robot_marker_detected = false;
 
     
     /*
       Create a histogram on the original image
     */
-  if(create_roi_rene || create_roi_puya)
+    if(create_roi_rene || create_roi_puya)
       showHistogram("Original image", image, cvPoint(0,15), 1, 1);
 
 
     // Start the marker detection loop
     for (size_t i=0; i<marker_detector.markers->size(); i++) {
 
-        if (i >= 32) break; // limit detection to 32 markers
+      if (i >= 32) break; // limit detection to 32 markers
 
-        int id = (*(marker_detector.markers))[i].GetId();
+      int id = (*(marker_detector.markers))[i].GetId();
 
-
-
-        Pose current_pose = (*(marker_detector.markers))[i].pose; // get pose
-        if(show_single_pose) showPose(i, id, current_pose, d);
-
-    SIMPLE_POSE sp = getSimplePose(current_pose);
-            
-        cout << "Current Translation of marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << endl;
-        cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << endl;
-
-        if(create_roi_rene) createROI("ROI Rene", image, cam, current_pose, MARKER_SIZE/1.5, -(MARKER_SIZE)/1.5, 0, MARKER_SIZE/4,-(MARKER_SIZE)/4 ,0);
-
-        if(create_roi_puya) createROI("ROI Puya", image, cam, current_pose, MARKER_SIZE/2 +2, MARKER_SIZE/2 -4, 0, -(MARKER_SIZE)/2 +2,MARKER_SIZE/2 + 14,0.0);
-
-        if(marker_detected) { // we found at least one marker before, so we must average
-      Pose temp_pose = calculateTipPose(current_pose);
-            
-      CvMat *temp_translation = cvCreateMat(3, 1, CV_64FC1);
-      CvMat *avg_translation = cvCreateMat(3, 1, CV_64FC1);
-
-      avg_pose.GetTranslation(avg_translation);
-      temp_pose.GetTranslation(temp_translation);
+      // skip all markers that are not relevant. In the current setup, where we only use relevant
+      // markers this means usually only that we omit misdetections
+      if(id != 0 && id != 68 && id != 79 && id != 176 && id != 187 && id != 255 ) continue;
 
 
-      avg_pose.SetTranslation( 
-        (cvmGet(temp_translation,0,0) + cvmGet(avg_translation,0,0)) / 2,
-        (cvmGet(temp_translation,1,0) + cvmGet(avg_translation,1,0)) / 2,
-        (cvmGet(temp_translation,2,0) + cvmGet(avg_translation,2,0)) / 2 
-      );
+      Pose current_pose = (*(marker_detector.markers))[i].pose; // get pose
+      if(show_single_pose) showPose(i, id, current_pose, d);
 
-            
-            
-        } else { // first marker found. Just apply current pose and move to cube center
-      avg_pose = calculateTipPose(current_pose);
-        }
-        
-        // set the flag if first (or another) marker was detected OR robot marker was detected
-    if(id == ROBOT_MARKER) {
-      robot_marker_detected = true;
-      robot_marker_pose = current_pose;
-      cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << endl;
-    } else marker_detected = true;
+      SIMPLE_POSE sp = getSimplePose(current_pose);
+          
+      cout << "Current Translation of marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << endl;
+      cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << endl;
+
+      if(create_roi_rene) createROI("ROI Rene", image, cam, current_pose, MARKER_SIZE/1.5, -(MARKER_SIZE)/1.5, 0, MARKER_SIZE/4,-(MARKER_SIZE)/4 ,0);
+
+      if(create_roi_puya) createROI("ROI Puya", image, cam, current_pose, MARKER_SIZE/2 +2, MARKER_SIZE/2 -4, 0, -(MARKER_SIZE)/2 +2,MARKER_SIZE/2 + 14,0.0);
+
+      if(marker_detected) { // we found at least one marker before, so we must average
+        Pose temp_pose = calculateTipPose(current_pose);
+              
+        CvMat *temp_translation = cvCreateMat(3, 1, CV_64FC1);
+        CvMat *avg_translation = cvCreateMat(3, 1, CV_64FC1);
+
+        avg_pose.GetTranslation(avg_translation);
+        temp_pose.GetTranslation(temp_translation);
+
+
+        avg_pose.SetTranslation( 
+          (cvmGet(temp_translation,0,0) + cvmGet(avg_translation,0,0)) / 2,
+          (cvmGet(temp_translation,1,0) + cvmGet(avg_translation,1,0)) / 2,
+          (cvmGet(temp_translation,2,0) + cvmGet(avg_translation,2,0)) / 2 
+        );
+
+          
+          
+      } else { // first marker found. Just apply current pose and move to cube center
+        avg_pose = calculateTipPose(current_pose);
+      }
+      
+      // set the flag if first (or another) marker was detected OR robot marker was detected
+      if(id == ROBOT_MARKER) {
+        robot_marker_detected = true;
+        robot_marker_pose = current_pose;
+        cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << endl;
+      } else marker_detected = true;
     } // end loop markers
 
     SIMPLE_POSE sp2 = getSimplePose(avg_pose);
@@ -223,7 +226,7 @@ void videocallback(IplImage *image)
       // logic is: Cam1->ZeroMarker * ZeroMarker->PencilTip = Cam1->PencilTip
       // => (Cam1->ZeroMarker)^-1 * Cam1->PencilTip = ZeroMarker->PencilTip
       Pose avg_pose_relative_to_robot_marker;
-    avg_pose_relative_to_robot_marker.Reset();
+      avg_pose_relative_to_robot_marker.Reset();
 
       avg_pose_relative_to_robot_marker = calculatePoseRelativeToRobotMarker(robot_marker_pose, avg_pose);     
           
