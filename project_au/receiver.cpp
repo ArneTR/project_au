@@ -14,6 +14,8 @@
 #define MARKER_RESOLUTION 5
 #define MARKER_MARGIN 1.0
 
+#define ROBOT_MARKER 0
+
 #include "CvTestbed.h"
 #include "MarkerDetector.h"
 #include "GlutViewer.h"
@@ -144,7 +146,7 @@ void videocallback(IplImage *image)
         
         int id = (*(marker_detector.markers))[i].GetId();
         
-        if(id == 10) { // we detected the 0 marker. Now we try to ready from the stream
+        if(id == ROBOT_MARKER) { // we detected the 0 marker. Now we try to ready from the stream
 
           Pose zero_marker_pose = (*(marker_detector.markers))[i].pose; // get pose
 
