@@ -38,11 +38,8 @@
 #include <stdio.h>
 
 
-
-
 using namespace alvar;
 using namespace std;
-
 
 bool initial_calibrate = true; // will load calibration XML file
 
@@ -50,7 +47,7 @@ bool activate_glutviewer = true; // will open two additional windows showing det
 
 bool show_single_pose = true;
 
-bool send_pose = true;
+bool send_pose = false;
 
 bool show_average_pose = true;
 
@@ -59,7 +56,6 @@ bool create_roi_rene = false;
 bool create_roi_puya = false;
 
 bool calculate_robot_pose = true;
-
 
 int counter = 1 ;
 
