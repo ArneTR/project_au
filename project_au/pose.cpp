@@ -24,12 +24,12 @@ void showPose(int number, int id, Pose p, Drawable* d) {
 
 }
 
-Pose calculateTipPose(Pose p, bool top_marker = false) {
+Pose calculateTipPose(Pose p, int id) {
     
     Pose tip_pose;
     tip_pose.Reset();
     
-    if(top_marker) {
+    if(id == 255) { // top_marker
       tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
         0, 
         0,
@@ -42,6 +42,36 @@ Pose calculateTipPose(Pose p, bool top_marker = false) {
         -(MARKER_SIZE/2) - (MARKER_WHITE_MARGIN)
       );
     }
+
+    // now we rotate the marker 90 degrees
+    CvMat *euler_matrix = cvCreateMat(3, 1, CV_64FC1);
+    tip_pose.GetEuler(euler_matrix);
+
+    //cout << "Current euler:" << cvmGet(euler_matrix,0,0) << " ; " << cvmGet(euler_matrix,1,0) << " ; " << cvmGet(euler_matrix,2,0) << endl; 
+
+    if(id == 255) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) + 180.0); // flip 180 degrees (only valid for top marker)
+      cvmSet(euler_matrix, 1, 0, -cvmGet(euler_matrix,1,0)); // flip 180 degrees (only valid for top marker) // green y axis
+      cvmSet(euler_matrix, 2, 0, -cvmGet(euler_matrix,2,0)); // flip 180 degrees (only valid for top marker)
+    } else if(id == 187) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    } else if(id == 176) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) - 180.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    } else if(id == 68) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) - 0.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    } else if(id == 79) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) + 90.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    }
+
+    //cout << "Shifted euler:" << cvmGet(euler_matrix,0,0) << " ; " << cvmGet(euler_matrix,1,0) << " ; " << cvmGet(euler_matrix,2,0) << endl; 
+
+
+    tip_pose.SetEuler(euler_matrix);
+
 
     CvMat *current_matrix = cvCreateMat(4, 4, CV_64FC1);
     p.GetMatrix(current_matrix); // load current rotation in empty matrix
@@ -60,24 +90,6 @@ Pose calculateTipPose(Pose p, bool top_marker = false) {
 
     tip_pose.SetMatrix(result);
 
-    // now we rotate the marker 90 degrees
-    CvMat *euler_matrix = cvCreateMat(3, 1, CV_64FC1);
-    tip_pose.GetEuler(euler_matrix);
-
-    //cout << "Current euler:" << cvmGet(euler_matrix,0,0) << " ; " << cvmGet(euler_matrix,1,0) << " ; " << cvmGet(euler_matrix,2,0) << endl; 
-
-    if(top_marker) {
-      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) + 180.0); // flip 180 degrees (only valid for top marker)
-      cvmSet(euler_matrix, 1, 0, -cvmGet(euler_matrix,1,0)); // flip 180 degrees (only valid for top marker) // green y axis
-      cvmSet(euler_matrix, 2, 0, -cvmGet(euler_matrix,2,0)); // flip 180 degrees (only valid for top marker)
-    } else {
-      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
-    }
-
-    //cout << "Shifted euler:" << cvmGet(euler_matrix,0,0) << " ; " << cvmGet(euler_matrix,1,0) << " ; " << cvmGet(euler_matrix,2,0) << endl; 
-
-
-    tip_pose.SetEuler(euler_matrix);
 
     return tip_pose;
 }
@@ -124,7 +136,7 @@ Pose transformPoseRelativeToCam(Pose robot_marker_pose, Pose p) {
 
     Pose transformation_pose;
     transformation_pose.Reset();
-    
+
     transformation_pose.SetMatrix(result);
 
     return transformation_pose;
