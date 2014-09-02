@@ -18,7 +18,9 @@
 
 #define ROBOT_MARKER 0
 
-#define TIME_AVERAGE_POSES 10
+#define TIME_AVERAGE_POSES 5
+
+#define BRIGHTNESS_MARGIN 50
 
 #include "CvTestbed.h"
 #include "MarkerDetector.h"
@@ -59,11 +61,14 @@ bool send_pose = false;
 
 bool show_average_pose = true;
 
-bool create_roi = false;
+bool create_roi = true;
 
 bool calculate_robot_pose = false;
 
 std::vector<SIMPLE_POSE> average_poses;
+
+int current_brightness = 0;
+int last_brightness = 0;
 
 int counter = 1 ;
 
@@ -177,7 +182,7 @@ void videocallback(IplImage *image)
 
       if(isPencilMarker(id)) {
         if(create_roi) {
-          createROI(
+          current_brightness = createROI(
             "ROI Puya"
             , image
             , cam
@@ -189,6 +194,11 @@ void videocallback(IplImage *image)
             , MARKER_SIZE + MARKER_WHITE_MARGIN // p2_y
             ,0 //p2_z
           );
+
+          std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
+          if(current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) std::cout << "Detected swap!!!!!!!!!!!!!!!!!!!" << std::endl;
+
+          last_brightness = current_brightness;
         }
 
         if(marker_detected) { // we found at least one marker before, so we must average. This is multi-marker averaging!

@@ -1,7 +1,7 @@
 
 using namespace std;
 
-void showHistogram(const char* name, IplImage* image, CvPoint point, int x_l, int y_l) {
+double showHistogram(const char* name, IplImage* image, CvPoint point, int x_l, int y_l) {
 
     IplImage* copy_img = cvCloneImage(image);
     
@@ -56,10 +56,12 @@ void showHistogram(const char* name, IplImage* image, CvPoint point, int x_l, in
   //free memory. otherwise program will crash after some time with memory hole
   cvReleaseImage(&img_grayscale);
   cvReleaseImage(&copy_img);
+
+  return mean_brightness;
   
 }
 
-void createROI(const char* name, IplImage* image, Camera cam, Pose current_pose,  float p1_x, float p1_y, float p1_z, float p2_x, float p2_y, float p2_z) {
+double createROI(const char* name, IplImage* image, Camera cam, Pose current_pose,  float p1_x, float p1_y, float p1_z, float p2_x, float p2_y, float p2_z) {
 
     // create a reactangle by using a point in the center of the marker and a point exactly one marker length to the left and one to the top
     CvPoint3D32f corner_top_left_x = cvPoint3D32f(p1_x, p1_y, p1_z);
@@ -78,7 +80,7 @@ void createROI(const char* name, IplImage* image, Camera cam, Pose current_pose,
 
    
     
-    showHistogram(
+    return showHistogram(
       name, 
       image, 
       corner_top_left_x_2d_projected, 
