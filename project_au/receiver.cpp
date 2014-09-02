@@ -2,17 +2,20 @@
 
   #include <winsock2.h>
   #pragma comment( lib, "ws2_32.lib" )
-  #define WINDOWS_SOCKETS 1
-#else
-  #define WINDOWS_SOCKETS 0
 #endif
-#define APP_SOCKET_PORT 11113
+#define APP_SOCKET_PORT 11114
+#define SERVER_IP "127.0.0.1"
 
 #define PENCIL_LENGTH 50.0 // should be 146.0 later on
 
 #define MARKER_SIZE 46.0 // mm
+#define MARKER
 #define MARKER_RESOLUTION 5
-#define MARKER_MARGIN 1.0
+#define MARKER_BLACK_MARGIN_RESOLUTION 1.0
+#define MARKER_BLACK_MARGIN 6.0
+
+#define MARKER_WHITE_MARGIN_RESOLUTION 1.0
+#define MARKER_WHITE_MARGIN 6.0
 
 #define ROBOT_MARKER 0
 
@@ -22,6 +25,10 @@
 #include "Shared.h"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+
+// include stuff for sending the POSE via mobile and also for managing sockets
+#include "network.hpp"
+#include "network.cpp"
 
 #include "pose.cpp"
 
@@ -121,7 +128,7 @@ void videocallback(IplImage *image)
     *
     * \note The default marker content resolution (_res) of 5 can only detect marker ids from 0 to 255. For larger marker ids, you need to increase the marker content resolution accordingly.
     */
-    marker_detector.SetMarkerSize(MARKER_SIZE, MARKER_RESOLUTION, MARKER_MARGIN);
+    marker_detector.SetMarkerSize(MARKER_SIZE, MARKER_RESOLUTION, MARKER_BLACK_MARGIN_RESOLUTION);
 
     // Here we try to use RGBA just to make sure that also it works...
     //cvCvtColor(image, rgba, CV_RGB2RGBA);
@@ -190,13 +197,19 @@ void videocallback(IplImage *image)
           Pose tip_pose;
           tip_pose.Reset();
 
-          tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
+          tip_pose.SetTranslation( 
             aktpos.x, 
             aktpos.y,
             aktpos.z
           );
 
-          //TODO: Set quaternion!!!
+          CvMat *quaternion_matrix = cvCreateMat(4, 1, CV_64FC1);
+          cvmSet(quaternion_matrix, 0, 0, aktpos.R);
+          cvmSet(quaternion_matrix, 1, 0, aktpos.i1);
+          cvmSet(quaternion_matrix, 2, 0, aktpos.i2);
+          cvmSet(quaternion_matrix, 3, 0, aktpos.i3);
+           
+          tip_pose.SetQuaternion(quaternion_matrix);
 
           tip_pose = transformPoseRelativeToCam(zero_marker_pose, tip_pose);
           
@@ -294,8 +307,8 @@ int main(int argc, char *argv[])
         
         server_socket = socket(AF_INET, SOCK_STREAM, 0);
         
-    cout << "Connecting to 192.168.178.67" << endl;
-        server = gethostbyname("192.168.178.67");
+        cout << "Connecting to " << SERVER_IP << endl;
+        server = gethostbyname(SERVER_IP);
         if (server == NULL) {
             fprintf(stderr,"ERROR, no such host\n");
             exit(0);
@@ -309,13 +322,13 @@ int main(int argc, char *argv[])
         serv_addr.sin_port = htons(APP_SOCKET_PORT);
       
         if (connect(server_socket,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
-            if(WINDOWS_SOCKETS) cout << "Error with WSA " << WSAGetLastError() << endl;
-      else perror("Error connecting");
-            return 0;
+          #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+            cout << "Error with WSA " << WSAGetLastError() << endl;
+          #endif
+          perror("Error connecting");
+          return 0;
         } else {
           cout << "Connect Succesful" << endl;
-      shutdown(server_socket, SD_SEND);
-
         }
 
     
