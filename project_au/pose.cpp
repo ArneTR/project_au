@@ -26,8 +26,7 @@ void showPose(int number, int id, Pose p, Drawable* d) {
 
 Pose calculateTipPose(Pose p, bool top_marker = false) {
     
-    Pose tip_pose = p; // makes a copy
-    
+    Pose tip_pose;
     tip_pose.Reset();
     
     if(top_marker) {
@@ -85,14 +84,13 @@ Pose calculateTipPose(Pose p, bool top_marker = false) {
 
 Pose calculatePoseRelativeToRobotMarker(Pose robot_marker_pose, Pose p) {
     
-    Pose pose = p; // makes a copy, just in case
     
     CvMat *robot_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
     CvMat *inv_robot_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
     robot_marker_pose.GetMatrix(robot_marker_matrix); // load current rotation in empty matrix
 
     CvMat *pose_matrix = cvCreateMat(4, 4, CV_64FC1);
-    pose.GetMatrix(pose_matrix); 
+    p.GetMatrix(pose_matrix); 
 
     CvMat *result = cvCreateMat(4,4, CV_64FC1);
 
@@ -103,6 +101,9 @@ Pose calculatePoseRelativeToRobotMarker(Pose robot_marker_pose, Pose p) {
     // now calcualte 0->Cam1 * C1->M = 0->M
     cvMatMul(inv_robot_marker_matrix, pose_matrix, result);
 
+    Pose pose;
+    pose.Reset();
+
     pose.SetMatrix(result);
 
     return pose;
@@ -110,19 +111,20 @@ Pose calculatePoseRelativeToRobotMarker(Pose robot_marker_pose, Pose p) {
 
 Pose transformPoseRelativeToCam(Pose robot_marker_pose, Pose p) {
     
-    Pose transformation_pose = p; // makes a copy, just in case
-    
     CvMat *robot_marker_matrix = cvCreateMat(4, 4, CV_64FC1);
     robot_marker_pose.GetMatrix(robot_marker_matrix); // load current rotation in empty matrix
 
     CvMat *transformation_pose_matrix = cvCreateMat(4, 4, CV_64FC1);
-    transformation_pose.GetMatrix(transformation_pose_matrix); 
+    p.GetMatrix(transformation_pose_matrix); 
 
     CvMat *result = cvCreateMat(4,4, CV_64FC1);
 
     // now calcualte Cam2->0 * 0->M = Cam2->M
     cvMatMul(robot_marker_matrix, transformation_pose_matrix, result);
 
+    Pose transformation_pose;
+    transformation_pose.Reset();
+    
     transformation_pose.SetMatrix(result);
 
     return transformation_pose;
