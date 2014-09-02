@@ -22,3 +22,9 @@ SIMPLE_POSE getSimplePose(Pose p) {
   return sp;
 
 }
+
+bool isPencilMarker(int id) {
+
+  if(id == 68 || id == 79 || id == 176 || id == 187 || id == 255 ) return true;
+  else return false;
+}
