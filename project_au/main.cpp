@@ -18,6 +18,8 @@
 
 #define ROBOT_MARKER 0
 
+#define TIME_AVERAGE_POSES 10
+
 #include "CvTestbed.h"
 #include "MarkerDetector.h"
 #include "GlutViewer.h"
@@ -41,10 +43,11 @@
 #include <errno.h>
 #include <iostream>
 #include <stdio.h>
+#include <vector>
+
 
 
 using namespace alvar;
-using namespace std;
 
 bool initial_calibrate = true; // will load calibration XML file
 
@@ -59,6 +62,8 @@ bool show_average_pose = true;
 bool create_roi = false;
 
 bool calculate_robot_pose = false;
+
+std::vector<SIMPLE_POSE> average_poses;
 
 int counter = 1 ;
 
@@ -75,12 +80,12 @@ SOCKET app_socket = -1;
 
 void calibrate(IplImage *image) {
     static IplImage *rgba;
-    cout<<"Loading calibration: "<<calibrationFilename.str();
+    std::cout<<"Loading calibration: "<<calibrationFilename.str();
     if (cam.SetCalib(calibrationFilename.str().c_str(), image->width, image->height)) {
-        cout<<" [Ok]"<<endl;
+        std::cout<<" [Ok]"<<std::endl;
     } else {
         cam.SetRes(image->width, image->height);
-        cout<<" [Fail]"<<endl;
+        std::cout<<" [Fail]"<<std::endl;
     }
     double p[16];
     cam.GetOpenglProjectionMatrix(p,image->width,image->height);
@@ -167,8 +172,8 @@ void videocallback(IplImage *image)
 
       SIMPLE_POSE sp = getSimplePose(current_pose);
           
-      cout << "Current Translation of marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << endl;
-      cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << endl;
+      std::cout << "Current Translation of marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << std::endl;
+      std::cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << std::endl;
 
       if(isPencilMarker(id)) {
         if(create_roi) {
@@ -186,13 +191,13 @@ void videocallback(IplImage *image)
           );
         }
 
-        if(marker_detected) { // we found at least one marker before, so we must average
+        if(marker_detected) { // we found at least one marker before, so we must average. This is multi-marker averaging!
           
           SIMPLE_POSE simple_temp_pose = getSimplePose(calculateTipPose(current_pose, id));
           
           SIMPLE_POSE simple_avg_pose = getSimplePose(avg_pose);
 
-          cout << "Current Translation of pre-AVG-marker "<< id <<" in relation to cam is (X,Y,Z): (" << simple_temp_pose.x << ", " << simple_temp_pose.y << ", " << simple_temp_pose.z << ")" << endl;
+          std::cout << "Current Translation of pre-AVG-marker "<< id <<" in relation to cam is (X,Y,Z): (" << simple_temp_pose.x << ", " << simple_temp_pose.y << ", " << simple_temp_pose.z << ")" << std::endl;
     
           avg_pose.SetTranslation( 
             (simple_avg_pose.x + simple_temp_pose.x )/ 2.0,
@@ -216,25 +221,57 @@ void videocallback(IplImage *image)
           avg_pose = calculateTipPose(current_pose, id);
           
           SIMPLE_POSE simple_avg_pose = getSimplePose(avg_pose);
-          cout << "Current Translation of pre-AVG-marker "<< id <<" in relation to cam is (X,Y,Z): (" << simple_avg_pose.x << ", " << simple_avg_pose.y << ", " << simple_avg_pose.z << ")" << endl;
+          std::cout << "Current Translation of pre-AVG-marker "<< id <<" in relation to cam is (X,Y,Z): (" << simple_avg_pose.x << ", " << simple_avg_pose.y << ", " << simple_avg_pose.z << ")" << std::endl;
     
         }
 
       } else { // id == ROBOT_MARKER
         robot_marker_detected = true;
         robot_marker_pose = current_pose;
-        cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << endl;
+        std::cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << std::endl;
       }
     } // end loop markers
 
     SIMPLE_POSE sp2 = getSimplePose(avg_pose);
 
-    cout << "Current Translation of AVG-marker in relation to cam is (X,Y,Z): (" << sp2.x << ", " << sp2.y << ", " << sp2.z << ")" << endl;
-    cout << "Current Quaternion of AVG-marker in relation to cam is (R, i1, i2, i3) : (" << sp2.R << ", " << sp2.i1 << ", " << sp2.i2 << ", " << sp2.i3 << ")" << endl;
+    std::cout << "Current Translation of AVG-marker in relation to cam is (X,Y,Z): (" << sp2.x << ", " << sp2.y << ", " << sp2.z << ")" << std::endl;
+    std::cout << "Current Quaternion of AVG-marker in relation to cam is (R, i1, i2, i3) : (" << sp2.R << ", " << sp2.i1 << ", " << sp2.i2 << ", " << sp2.i3 << ")" << std::endl;
+    
+    if(TIME_AVERAGE_POSES > 1 && marker_detected) { // we average over time!
+      int queue_size = average_poses.size();
+      std::cout << "Current TIME_AVERAGE_POSES queue has" << queue_size << " elements" << std::endl;
+      average_poses.insert( average_poses.begin(), sp2 ); // insert newest element at top
+      
+      if(queue_size >= TIME_AVERAGE_POSES) { // remove the last element if queue is exceeded
+        average_poses.pop_back();  
+      }
+
+      //calculate time_average_pose
+      for(int i = queue_size; i > 0; i--) {
+        sp2.x = sp2.x + average_poses[i-1].x;
+        sp2.y = sp2.y + average_poses[i-1].y;
+        sp2.z = sp2.z + average_poses[i-1].z;
+      }
+
+      sp2.x = sp2.x / queue_size;
+      sp2.y = sp2.y / queue_size;
+      sp2.z = sp2.z / queue_size;
+
+      // set to real avg pose
+      avg_pose.SetTranslation( 
+        sp2.x,
+        sp2.y,
+        sp2.z
+      );
+
+      std::cout << "Current Translation of TIME-AVG-marker in relation to cam is (X,Y,Z): (" << sp2.x << ", " << sp2.y << ", " << sp2.z << ")" << std::endl;
+      
+    }
+
     
 
-    if(show_average_pose) {
-      
+    if(show_average_pose && marker_detected) {
+
       showPose(10, 0, avg_pose, d);
 
       markTip(image, cam, avg_pose);
@@ -251,12 +288,12 @@ void videocallback(IplImage *image)
 
       avg_pose_relative_to_robot_marker = calculatePoseRelativeToRobotMarker(robot_marker_pose, avg_pose);     
           
-      cout << "Sending robot pose" << endl; 
+      std::cout << "Sending robot pose" << std::endl; 
           
       SIMPLE_POSE aktpos = getSimplePose(avg_pose_relative_to_robot_marker);
           
-      cout << "Current Translation of robot pose is (X,Y,Z): (" << aktpos.x << ", " << aktpos.y << ", " << aktpos.z << ")" << endl;
-      cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << endl;
+      std::cout << "Current Translation of robot pose is (X,Y,Z): (" << aktpos.x << ", " << aktpos.y << ", " << aktpos.z << ")" << std::endl;
+      std::cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << std::endl;
       
       aktpos.type = 1;
       sendPos2Mobile(app_socket, aktpos);
@@ -399,7 +436,7 @@ int main(int argc, char *argv[])
         return 0;
     }
     catch (const std::exception &e) {
-        std::cout << "Exception: " << e.what() << endl;
+        std::cout << "Exception: " << e.what() << std::endl;
     }
     catch (...) {
         std::cout << "Exception: unknown" << std::endl;
