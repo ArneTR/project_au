@@ -3,13 +3,18 @@
   #pragma comment( lib, "ws2_32.lib" )
 #endif
 
-#define APP_SOCKET_PORT 11113
+#define APP_SOCKET_PORT 11114
 
-#define PENCIL_LENGTH 50.0 // should be 146.0 later on
+#define PENCIL_LENGTH 146.0 // should be 146.0 later on
 
 #define MARKER_SIZE 46.0 // mm
+#define MARKER
 #define MARKER_RESOLUTION 5
-#define MARKER_MARGIN 1.0
+#define MARKER_BLACK_MARGIN_RESOLUTION 1.0
+#define MARKER_BLACK_MARGIN 6.0
+
+#define MARKER_WHITE_MARGIN_RESOLUTION 1.0
+#define MARKER_WHITE_MARGIN 6.0
 
 #define ROBOT_MARKER 0
 
@@ -51,11 +56,9 @@ bool send_pose = false;
 
 bool show_average_pose = true;
 
-bool create_roi_rene = false;
+bool create_roi = false;
 
-bool create_roi_puya = false;
-
-bool calculate_robot_pose = true;
+bool calculate_robot_pose = false;
 
 int counter = 1 ;
 
@@ -114,7 +117,7 @@ void videocallback(IplImage *image)
     *
     * \note The default marker content resolution (_res) of 5 can only detect marker ids from 0 to 255. For larger marker ids, you need to increase the marker content resolution accordingly.
     */
-    marker_detector.SetMarkerSize(MARKER_SIZE, MARKER_RESOLUTION, MARKER_MARGIN);
+    marker_detector.SetMarkerSize(MARKER_SIZE, MARKER_RESOLUTION, MARKER_BLACK_MARGIN_RESOLUTION);
 
     // Here we try to use RGBA just to make sure that also it works...
     //cvCvtColor(image, rgba, CV_RGB2RGBA);
@@ -140,12 +143,12 @@ void videocallback(IplImage *image)
     bool marker_detected = false;
     bool robot_marker_detected = false;
 
-    
     /*
       Create a histogram on the original image
     */
-    if(create_roi_rene || create_roi_puya)
+    if(create_roi) {
       showHistogram("Original image", image, cvPoint(0,15), 1, 1);
+    }
 
 
     // Start the marker detection loop
@@ -157,8 +160,7 @@ void videocallback(IplImage *image)
 
       // skip all markers that are not relevant. In the current setup, where we only use relevant
       // markers this means usually only that we omit misdetections
-      if(id != 0 && id != 68 && id != 79 && id != 176 && id != 187 && id != 255 ) continue;
-
+      if(id != ROBOT_MARKER && !isPencilMarker(id)) continue;
 
       Pose current_pose = (*(marker_detector.markers))[i].pose; // get pose
       if(show_single_pose) showPose(i, id, current_pose, d);
@@ -168,38 +170,61 @@ void videocallback(IplImage *image)
       cout << "Current Translation of marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << endl;
       cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << endl;
 
-      if(create_roi_rene) createROI("ROI Rene", image, cam, current_pose, MARKER_SIZE/1.5, -(MARKER_SIZE)/1.5, 0, MARKER_SIZE/4,-(MARKER_SIZE)/4 ,0);
+      if(isPencilMarker(id)) {
+        if(create_roi) {
+          createROI(
+            "ROI Puya"
+            , image
+            , cam
+            , current_pose
+            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
+            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_y
+            , 0 // p1_z
+            , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
+            , MARKER_SIZE + MARKER_WHITE_MARGIN // p2_y
+            ,0 //p2_z
+          );
+        }
 
-      if(create_roi_puya) createROI("ROI Puya", image, cam, current_pose, MARKER_SIZE/2 +2, MARKER_SIZE/2 -4, 0, -(MARKER_SIZE)/2 +2,MARKER_SIZE/2 + 14,0.0);
-
-      if(marker_detected) { // we found at least one marker before, so we must average
-        Pose temp_pose = calculateTipPose(current_pose);
-              
-        CvMat *temp_translation = cvCreateMat(3, 1, CV_64FC1);
-        CvMat *avg_translation = cvCreateMat(3, 1, CV_64FC1);
-
-        avg_pose.GetTranslation(avg_translation);
-        temp_pose.GetTranslation(temp_translation);
-
-
-        avg_pose.SetTranslation( 
-          (cvmGet(temp_translation,0,0) + cvmGet(avg_translation,0,0)) / 2,
-          (cvmGet(temp_translation,1,0) + cvmGet(avg_translation,1,0)) / 2,
-          (cvmGet(temp_translation,2,0) + cvmGet(avg_translation,2,0)) / 2 
-        );
-
+        if(marker_detected) { // we found at least one marker before, so we must average
           
+          SIMPLE_POSE simple_temp_pose = getSimplePose(calculateTipPose(current_pose, id));
           
-      } else { // first marker found. Just apply current pose and move to cube center
-        avg_pose = calculateTipPose(current_pose);
-      }
-      
-      // set the flag if first (or another) marker was detected OR robot marker was detected
-      if(id == ROBOT_MARKER) {
+          SIMPLE_POSE simple_avg_pose = getSimplePose(avg_pose);
+
+          cout << "Current Translation of pre-AVG-marker "<< id <<" in relation to cam is (X,Y,Z): (" << simple_temp_pose.x << ", " << simple_temp_pose.y << ", " << simple_temp_pose.z << ")" << endl;
+    
+          avg_pose.SetTranslation( 
+            (simple_avg_pose.x + simple_temp_pose.x )/ 2.0,
+            (simple_avg_pose.y + simple_temp_pose.y )/ 2.0,
+            (simple_avg_pose.z + simple_temp_pose.z )/ 2.0
+          );
+
+          //if(id != 255) { // never use 255 marker quaternion!
+            CvMat *avg_quaternion_matrix = cvCreateMat(4, 1, CV_64FC1);
+          
+            cvmSet(avg_quaternion_matrix, 0, 0, simple_temp_pose.R);
+            cvmSet(avg_quaternion_matrix, 1, 0, simple_temp_pose.i1);
+            cvmSet(avg_quaternion_matrix, 2, 0, simple_temp_pose.i2);
+            cvmSet(avg_quaternion_matrix, 3, 0, simple_temp_pose.i3);
+           
+            //avg_pose.SetQuaternion(avg_quaternion_matrix);
+          //}  
+            
+        } else { // first marker found. Just apply current pose and move to cube center
+          marker_detected = true;
+          avg_pose = calculateTipPose(current_pose, id);
+          
+          SIMPLE_POSE simple_avg_pose = getSimplePose(avg_pose);
+          cout << "Current Translation of pre-AVG-marker "<< id <<" in relation to cam is (X,Y,Z): (" << simple_avg_pose.x << ", " << simple_avg_pose.y << ", " << simple_avg_pose.z << ")" << endl;
+    
+        }
+
+      } else { // id == ROBOT_MARKER
         robot_marker_detected = true;
         robot_marker_pose = current_pose;
         cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << endl;
-      } else marker_detected = true;
+      }
     } // end loop markers
 
     SIMPLE_POSE sp2 = getSimplePose(avg_pose);
@@ -253,7 +278,7 @@ int main(int argc, char *argv[])
         // Output usage message
         std::string filename(argv[0]);
         filename = filename.substr(filename.find_last_of('\\') + 1);
-        std::cout << "Project AU 23.08.2014" << std::endl;
+        std::cout << "Project AU 02.09.2014" << std::endl;
         std::cout << "====================" << std::endl;
         std::cout << std::endl;
         std::cout << "Description:" << std::endl;
