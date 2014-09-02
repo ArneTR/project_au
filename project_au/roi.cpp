@@ -10,10 +10,16 @@ void showHistogram(const char* name, IplImage* image, CvPoint point, int x_l, in
 
     cvCvtColor(copy_img, img_grayscale, CV_RGB2GRAY);
 
+    if( (point.x) >= image->width || (point.y) >= image->height) {
+      cout << "--------- WARNING: OUT OF BOUNDS FOR ROI" << endl;
+      return;
+    }
+
     if(x_l != 0 && y_l != 0) {
-      cout << "Setting roi to " << point.x << ":" << point.y << " with length " << x_l << ":" << y_l << endl;
+      cout << "Setting roi to " << point.x << ":" << point.y << " with length " << x_l << ":" << y_l << " in image " << image->width << ":" << image->height << endl;
       cvSetImageROI(img_grayscale, cvRect(point.x, point.y, x_l, y_l));
     }
+
     int histSize = 256;
 
     /// Set the ranges ( for B,G,R) )
