@@ -19,6 +19,13 @@ SIMPLE_POSE getSimplePose(Pose p) {
   sp.i2 = cvmGet(quaternion,2,0);
   sp.i3 = cvmGet(quaternion,3,0);
 
+  CvMat *euler_matrix = cvCreateMat(3, 1, CV_64FC1);
+  p.GetEuler(euler_matrix);
+
+  sp.alpha = cvmGet(euler_matrix,0,0);
+  sp.beta = cvmGet(euler_matrix,1,0);
+  sp.gamma = cvmGet(euler_matrix,2,0);
+
   return sp;
 
 }

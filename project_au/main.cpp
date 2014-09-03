@@ -18,7 +18,7 @@
 
 #define ROBOT_MARKER 0
 
-#define TIME_AVERAGE_POSES 5
+#define TIME_AVERAGE_POSES 10
 
 #define BRIGHTNESS_MARGIN 50
 
@@ -215,16 +215,16 @@ void videocallback(IplImage *image)
             (simple_avg_pose.z + simple_temp_pose.z )/ 2.0
           );
 
-          //if(id != 255) { // never use 255 marker quaternion!
-            CvMat *avg_quaternion_matrix = cvCreateMat(4, 1, CV_64FC1);
+          CvMat *avg_euler_matrix = cvCreateMat(3, 1, CV_64FC1);
+          avg_pose.GetEuler(avg_euler_matrix);
+
+
+          cvmSet(avg_euler_matrix, 0, 0, (simple_avg_pose.alpha + simple_temp_pose.alpha) / 2 );
+          cvmSet(avg_euler_matrix, 1, 0, (simple_avg_pose.beta + simple_temp_pose.beta) / 2 );
+          cvmSet(avg_euler_matrix, 2, 0, (simple_avg_pose.gamma + simple_temp_pose.gamma) / 2 );
           
-            cvmSet(avg_quaternion_matrix, 0, 0, simple_temp_pose.R);
-            cvmSet(avg_quaternion_matrix, 1, 0, simple_temp_pose.i1);
-            cvmSet(avg_quaternion_matrix, 2, 0, simple_temp_pose.i2);
-            cvmSet(avg_quaternion_matrix, 3, 0, simple_temp_pose.i3);
-           
-            //avg_pose.SetQuaternion(avg_quaternion_matrix);
-          //}  
+          avg_pose.SetEuler(avg_euler_matrix);
+ 
             
         } else { // first marker found. Just apply current pose and move to cube center
           marker_detected = true;
@@ -261,11 +261,17 @@ void videocallback(IplImage *image)
         sp2.x = sp2.x + average_poses[i-1].x;
         sp2.y = sp2.y + average_poses[i-1].y;
         sp2.z = sp2.z + average_poses[i-1].z;
+        sp2.alpha = sp2.alpha + average_poses[i-1].alpha;
+        sp2.beta = sp2.beta + average_poses[i-1].beta;
+        sp2.gamma = sp2.gamma + average_poses[i-1].gamma;
       }
 
       sp2.x = sp2.x / queue_size;
       sp2.y = sp2.y / queue_size;
       sp2.z = sp2.z / queue_size;
+      sp2.alpha = sp2.alpha / queue_size;
+      sp2.beta = sp2.beta / queue_size;
+      sp2.gamma = sp2.gamma / queue_size;
 
       // set to real avg pose
       avg_pose.SetTranslation( 
@@ -273,6 +279,14 @@ void videocallback(IplImage *image)
         sp2.y,
         sp2.z
       );
+
+      CvMat *euler_matrix = cvCreateMat(3, 1, CV_64FC1);
+      
+      cvmSet(euler_matrix, 0, 0, sp2.alpha);
+      cvmSet(euler_matrix, 1, 0, sp2.beta);
+      cvmSet(euler_matrix, 2, 0, sp2.gamma);
+      
+      avg_pose.SetEuler(euler_matrix);
 
       std::cout << "Current Translation of TIME-AVG-marker in relation to cam is (X,Y,Z): (" << sp2.x << ", " << sp2.y << ", " << sp2.z << ")" << std::endl;
       

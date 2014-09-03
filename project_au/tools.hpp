@@ -12,6 +12,10 @@
     double i1;
     double i2;
     double i3;
+    double phi;
+    double alpha;
+    double beta;
+    double gamma;
   }SIMPLE_POSE;
 #endif
 
