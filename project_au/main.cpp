@@ -61,18 +61,15 @@ bool send_pose = false;
 
 bool show_average_pose = true;
 
-bool create_roi = true;
-
-bool calculate_robot_pose = false;
-
-std::vector<SIMPLE_POSE> average_poses;
+bool record_pose = false;
 
 int current_brightness = 0;
+
 int last_brightness = 0;
 
-int counter = 1 ;
+bool show_roi = false;
 
-Pose avg_pose_relative_to_robot;
+std::vector<SIMPLE_POSE> average_poses;
 
 Camera cam;
 
@@ -156,10 +153,8 @@ void videocallback(IplImage *image)
     /*
       Create a histogram on the original image
     */
-    if(create_roi) {
-      showHistogram("Original image", image, cvPoint(0,15), 1, 1);
-    }
-
+    showHistogram(show_roi, image, cvPoint(0,15), 1, 1);
+    
 
     // Start the marker detection loop
     for (size_t i=0; i<marker_detector.markers->size(); i++) {
@@ -181,26 +176,24 @@ void videocallback(IplImage *image)
       std::cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << std::endl;
 
       if(isPencilMarker(id)) {
-        if(create_roi) {
-          current_brightness = createROI(
-            "ROI Puya"
-            , image
-            , cam
-            , current_pose
-            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
-            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_y
-            , 0 // p1_z
-            , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
-            , MARKER_SIZE + MARKER_WHITE_MARGIN // p2_y
-            ,0 //p2_z
-          );
+        current_brightness = createROI(
+          show_roi
+          , image
+          , cam
+          , current_pose
+          , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
+          , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_y
+          , 0 // p1_z
+          , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
+          , MARKER_SIZE + MARKER_WHITE_MARGIN // p2_y
+          ,0 //p2_z
+        );
 
-          std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
-          if(current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) std::cout << "Detected swap!!!!!!!!!!!!!!!!!!!" << std::endl;
+        std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
+        if(current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) std::cout << "Detected swap!!!!!!!!!!!!!!!!!!!" << std::endl;
 
-          last_brightness = current_brightness;
-        }
-
+        last_brightness = current_brightness;
+      
         if(marker_detected) { // we found at least one marker before, so we must average. This is multi-marker averaging!
           
           SIMPLE_POSE simple_temp_pose = getSimplePose(calculateTipPose(current_pose, id));
@@ -305,7 +298,7 @@ void videocallback(IplImage *image)
 
     }
 
-    if(marker_detected && robot_marker_detected && calculate_robot_pose) {
+    if(marker_detected && robot_marker_detected) {
 
       // first we need to calculate the transformation Matrix to get from the zero_marker to the pencil_tip
       // logic is: Cam1->ZeroMarker * ZeroMarker->PencilTip = Cam1->PencilTip
