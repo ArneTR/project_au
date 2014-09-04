@@ -18,7 +18,7 @@
 
 #define ROBOT_MARKER 0
 
-#define TIME_AVERAGE_POSES 5
+#define TIME_AVERAGE_POSES 10
 
 #define BRIGHTNESS_MARGIN 50
 
@@ -219,9 +219,9 @@ void videocallback(IplImage *image)
           avg_pose.GetEuler(avg_euler_matrix);
 
 
-          cvmSet(avg_euler_matrix, 0, 0, (simple_avg_pose.alpha + simple_temp_pose.alpha) / 2 );
-          cvmSet(avg_euler_matrix, 1, 0, (simple_avg_pose.beta + simple_temp_pose.beta) / 2 );
-          cvmSet(avg_euler_matrix, 2, 0, (simple_avg_pose.gamma + simple_temp_pose.gamma) / 2 );
+          cvmSet(avg_euler_matrix, 0, 0, (simple_avg_pose.alpha + simple_temp_pose.alpha) / 2.0 );
+          cvmSet(avg_euler_matrix, 1, 0, (simple_avg_pose.beta + simple_temp_pose.beta) / 2.0 );
+          cvmSet(avg_euler_matrix, 2, 0, (simple_avg_pose.gamma + simple_temp_pose.gamma) / 2.0 );
           
           avg_pose.SetEuler(avg_euler_matrix);
  
@@ -248,7 +248,7 @@ void videocallback(IplImage *image)
     std::cout << "Current Quaternion of AVG-marker in relation to cam is (R, i1, i2, i3) : (" << sp2.R << ", " << sp2.i1 << ", " << sp2.i2 << ", " << sp2.i3 << ")" << std::endl;
     
     if(TIME_AVERAGE_POSES > 1 && marker_detected) { // we average over time!
-      int queue_size = average_poses.size();
+      double queue_size = average_poses.size();
       std::cout << "Current TIME_AVERAGE_POSES queue has" << queue_size << " elements" << std::endl;
       average_poses.insert( average_poses.begin(), sp2 ); // insert newest element at top
       
@@ -257,7 +257,7 @@ void videocallback(IplImage *image)
       }
 
       //calculate time_average_pose
-      for(int i = queue_size; i > 0; i--) {
+      for(int i = (int) queue_size; i > 0; i--) {
         sp2.x = sp2.x + average_poses[i-1].x;
         sp2.y = sp2.y + average_poses[i-1].y;
         sp2.z = sp2.z + average_poses[i-1].z;
