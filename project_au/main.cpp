@@ -249,12 +249,8 @@ void videocallback(IplImage *image)
     
     if(TIME_AVERAGE_POSES > 1 && marker_detected) { // we average over time!
       double queue_size = average_poses.size();
+
       std::cout << "Current TIME_AVERAGE_POSES queue has" << queue_size << " elements" << std::endl;
-      average_poses.insert( average_poses.begin(), sp2 ); // insert newest element at top
-      
-      if(queue_size >= TIME_AVERAGE_POSES) { // remove the last element if queue is exceeded
-        average_poses.pop_back();  
-      }
 
       //calculate time_average_pose
       for(int i = (int) queue_size; i > 0; i--) {
@@ -266,12 +262,13 @@ void videocallback(IplImage *image)
         sp2.gamma = sp2.gamma + average_poses[i-1].gamma;
       }
 
-      sp2.x = sp2.x / queue_size;
-      sp2.y = sp2.y / queue_size;
-      sp2.z = sp2.z / queue_size;
-      sp2.alpha = sp2.alpha / queue_size;
-      sp2.beta = sp2.beta / queue_size;
-      sp2.gamma = sp2.gamma / queue_size;
+      // we need to divide by queue size + current element
+      sp2.x = sp2.x / (queue_size+1.0);
+      sp2.y = sp2.y / (queue_size+1.0);
+      sp2.z = sp2.z / (queue_size+1.0);
+      sp2.alpha = sp2.alpha / (queue_size+1.0);
+      sp2.beta = sp2.beta / (queue_size+1.0);
+      sp2.gamma = sp2.gamma / (queue_size+1.0);
 
       // set to real avg pose
       avg_pose.SetTranslation( 
@@ -290,6 +287,12 @@ void videocallback(IplImage *image)
 
       std::cout << "Current Translation of TIME-AVG-marker in relation to cam is (X,Y,Z): (" << sp2.x << ", " << sp2.y << ", " << sp2.z << ")" << std::endl;
       
+      // we add the current element to the queue and remove the last
+      average_poses.insert( average_poses.begin(), sp2 ); // insert newest element at top
+      
+      if(queue_size >= TIME_AVERAGE_POSES) { // remove the last element if queue is exceeded
+        average_poses.pop_back();  
+      }
     }
 
     
