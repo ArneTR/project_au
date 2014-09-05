@@ -3,7 +3,7 @@
   #include <winsock2.h>
   #pragma comment( lib, "ws2_32.lib" )
 #endif
-#define APP_SOCKET_PORT 11114
+#define APP_SOCKET_PORT 11113
 #define SERVER_IP "127.0.0.1"
 
 #define PENCIL_LENGTH 50.0 // should be 146.0 later on
@@ -29,7 +29,7 @@
 // include stuff for sending the POSE via mobile and also for managing sockets
 #include "network.hpp"
 #include "network.cpp"
-
+<
 #include "pose.cpp"
 
 #include "tools.cpp"

@@ -24,7 +24,7 @@ SOCKET createsocket(unsigned int socket_port) {
   // warum hier statt 0 nicht einfach IPPROTO_TCP
   SOCKET sockfd = socket (AF_INET, SOCK_STREAM, 0);          //Rückgabewert sockfd ist die Nummer des Sockets
   if (sockfd == -1) {
-    perror ("socket()");
+    return showNetworkError ("socket()");
   } else {
     cout << "Socket erstellt\n";
   } 
@@ -37,37 +37,39 @@ SOCKET createsocket(unsigned int socket_port) {
 
   //Socket mit Port assoziieren (Bind)
   if (bind(sockfd, (sockaddr *)&my_addr, sizeof(sockaddr)) == -1)  {
-    perror ("bind()");
+    return showNetworkError ("bind()");
   } else {
     cout << "Bind to port " << socket_port << " successful. Waiting for client ..." << endl;
   }
         
+  return sockfd;
+  
+}
+
+SOCKET connectSocket(SOCKET sock) {
+  
   //Auf eingehende Verbindung warten
-  if (listen (sockfd, 5) == -1) { //maximal 5 Verbindungsanfragen in Warteschlange, falls gerade keine Verbindung angenommen werden kann
-    perror ("listen()");
+  if (listen (sock, 5) == -1) { //maximal 5 Verbindungsanfragen in Warteschlange, falls gerade keine Verbindung angenommen werden kann
+    return showNetworkError ("listen()");
   } else {  
-    cout << "Warte auf Client...";
+    std::cout << "Warte auf Client...";
   }       
-  #ifndef socklen_t
-    typedef int socklen_t;
-  #endif
+
   //Verbindung annehmen (accept)
   socklen_t sin_size = sizeof (sockaddr_in);
   sockaddr_in remote_host;
   
-  SOCKET new_socket = accept (sockfd, (sockaddr *) &remote_host, &sin_size); //sockfd: Socket des Clients
+  SOCKET new_socket = accept (sock, (sockaddr *) &remote_host, &sin_size); //sockfd: Socket des Clients
   if (new_socket == -1) {
-    perror ("accept()");
+    return showNetworkError ("accept()");
   } else {
     cout << "Client verbunden\n";
   }  
 
   return new_socket;
-  
-  // Ende Server einrichten und auf Client warten   */
 }
 
-void sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos) {        
+int sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos) {        
   
   cout << "Pose before sending: " << aktpos.x << ", " << aktpos.y << "," << "," << aktpos.z << " ; " << aktpos.R << "," << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << endl;
 
@@ -89,11 +91,19 @@ void sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos) {
 
 
   if (send (sockfd, (char*) stream_buffer, streambuffer_size, 0) == -1) {
-    perror ("send()");
+    return showNetworkError("send()");
   }
   else { 
     std::cout << "  Daten gesendet:" << stream_buffer << std::endl; 
   }
   delete [] stream_buffer;
   
+}
+
+int showNetworkError(const char* error_message) {
+  #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    cout << error_message << ", WSA: " << WSAGetLastError() << endl;
+  #endif
+  perror(error_message);
+  return errno; // errno is automagically set
 }

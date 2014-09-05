@@ -30,8 +30,17 @@
 #define Y 1
 #define Z 2
 
+#ifndef socklen_t
+  typedef unsigned int socklen_t;
+#endif
+
 using namespace std;
 
 SOCKET createsocket(unsigned int socket_port);
 
-void sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos);
+int sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos);
+
+int showNetworkError(const char* error_message);
+
+SOCKET reconnectSocket(SOCKET sock);
+

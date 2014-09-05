@@ -3,7 +3,8 @@
   #pragma comment( lib, "ws2_32.lib" )
 #endif
 
-#define APP_SOCKET_PORT 11114
+#define APP_SOCKET_PORT 11113
+#define ROBOT_SOCKET_PORT 11114
 
 #define PENCIL_LENGTH 146.0 // should be 146.0 later on
 
@@ -20,7 +21,7 @@
 
 #define TIME_AVERAGE_POSES 5.0
 
-#define BRIGHTNESS_MARGIN 50
+#define BRIGHTNESS_MARGIN 30
 
 #include "CvTestbed.h"
 #include "MarkerDetector.h"
@@ -51,25 +52,41 @@
 
 using namespace alvar;
 
+/**
+  Changeable attributes
+*/
+
 bool initial_calibrate = true; // will load calibration XML file
 
 bool activate_glutviewer = true; // will open two additional windows showing detected markers in cartesian space
 
 bool show_single_pose = true;
 
-bool send_pose = false;
+bool send_pose = true;
 
 bool show_average_pose = true;
 
-bool record_pose = false;
+bool show_roi = true;
+
+/**
+  NON-Changeable attributes. These are in-program set flags.
+
+  DO NOT TAMPER!
+*/
 
 int current_brightness = 0;
 
 int last_brightness = 0;
 
-bool show_roi = false;
+bool start_recording_poses = false;
+
+/**
+  Globally used containers and variables
+*/
 
 std::vector<SIMPLE_POSE> average_poses;
+
+std::vector<SIMPLE_POSE> recored_poses;
 
 Camera cam;
 
@@ -77,7 +94,11 @@ Drawable d[32];
 
 std::stringstream calibrationFilename;
 
+SOCKET app_socket_handler = -1;
 SOCKET app_socket = -1;
+
+SOCKET robot_socket_handler = -1;
+SOCKET robot_socket = -1;
 
 
 void calibrate(IplImage *image) {
@@ -153,7 +174,7 @@ void videocallback(IplImage *image)
     /*
       Create a histogram on the original image
     */
-    showHistogram(show_roi, image, cvPoint(0,15), 1, 1);
+    if(show_roi) showHistogram(show_roi, image, cvPoint(0,15), 1, 1);
     
 
     // Start the marker detection loop
@@ -177,7 +198,7 @@ void videocallback(IplImage *image)
 
       if(isPencilMarker(id)) {
         current_brightness = createROI(
-          show_roi
+          show_roi // determine if value is written to image. Calculation is done always!
           , image
           , cam
           , current_pose
@@ -190,7 +211,15 @@ void videocallback(IplImage *image)
         );
 
         std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
-        if(current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) std::cout << "Detected swap!!!!!!!!!!!!!!!!!!!" << std::endl;
+        if(last_brightness > 0 && current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) {
+         std::cout << "Detected swap!!!!!!!!!!!!!!!!!!!" << std::endl;
+         if(start_recording_poses == true) { // it was true before, so we stop
+           start_recording_poses = false;
+         } else { // it was false before. So we clear the vector and start recording
+           start_recording_poses = true;
+           recored_poses.clear();
+         }
+        }
 
         last_brightness = current_brightness;
       
@@ -316,7 +345,15 @@ void videocallback(IplImage *image)
       std::cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << std::endl;
       
       aktpos.type = 1;
-      sendPos2Mobile(app_socket, aktpos);
+
+      if(start_recording_poses) {
+        recored_poses.insert(recored_poses.begin(), aktpos);
+        if(sendPos2Mobile(app_socket, aktpos) == 32) { // 32 == broken_pipe
+          std::cout << "Connection lost. Reconnecting client...";
+          app_socket = connectSocket(app_socket_handler);
+        }
+      }
+      
       //cvWaitKey(3000);
     }
 
@@ -366,7 +403,15 @@ int main(int argc, char *argv[])
         std::cout << "  q: quit" << std::endl;
         std::cout << std::endl;
 
-        if(send_pose) app_socket = createsocket(APP_SOCKET_PORT);
+        if(send_pose) {
+          std::cout << "Trying to connect app ..." << std::endl;
+          app_socket_handler = createsocket(APP_SOCKET_PORT);
+          app_socket = connectSocket(app_socket_handler);
+
+          std::cout << "Trying to connect robot ..." << std::endl;
+          robot_socket_handler = createsocket(ROBOT_SOCKET_PORT);
+          robot_socket = connectSocket(robot_socket_handler);
+        } 
 
         // Initialise GlutViewer and CvTestbed
         if(activate_glutviewer) GlutViewer::Start(argc, argv, 640, 480);
