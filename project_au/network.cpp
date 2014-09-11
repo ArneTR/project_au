@@ -91,12 +91,15 @@ int sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos) {
 
 
   if (send (sockfd, (char*) stream_buffer, streambuffer_size, 0) == -1) {
+    delete [] stream_buffer;
     return showNetworkError("send()");
   }
   else { 
+    delete [] stream_buffer;
     std::cout << "  Daten gesendet:" << stream_buffer << std::endl; 
   }
-  delete [] stream_buffer;
+
+  return 0;
   
 }
 
