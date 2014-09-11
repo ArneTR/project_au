@@ -18,10 +18,11 @@
 #define MARKER_WHITE_MARGIN 6.0
 
 #define ROBOT_MARKER 0
+#define ROBOT_MARKER_SIZE 103.0
 
 #define TIME_AVERAGE_POSES 5.0
 
-#define BRIGHTNESS_MARGIN 30
+#define BRIGHTNESS_MARGIN 40
 
 #include "CvTestbed.h"
 #include "MarkerDetector.h"
@@ -62,7 +63,9 @@ bool activate_glutviewer = true; // will open two additional windows showing det
 
 bool show_single_pose = true;
 
-bool send_pose = true;
+bool send_pose_to_app = true;
+
+bool send_pose_to_robot = true;
 
 bool show_average_pose = true;
 
@@ -146,6 +149,7 @@ void videocallback(IplImage *image)
     * \note The default marker content resolution (_res) of 5 can only detect marker ids from 0 to 255. For larger marker ids, you need to increase the marker content resolution accordingly.
     */
     marker_detector.SetMarkerSize(MARKER_SIZE, MARKER_RESOLUTION, MARKER_BLACK_MARGIN_RESOLUTION);
+    marker_detector.SetMarkerSizeForId(0, ROBOT_MARKER_SIZE);
 
     // Here we try to use RGBA just to make sure that also it works...
     //cvCvtColor(image, rgba, CV_RGB2RGBA);
@@ -213,6 +217,7 @@ void videocallback(IplImage *image)
         std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
         if(last_brightness > 0 && current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) {
          std::cout << "Detected swap!!!!!!!!!!!!!!!!!!!" << std::endl;
+         cvWaitKey(500);
          if(start_recording_poses == true) { // it was true before, so we stop
            start_recording_poses = false;
          } else { // it was false before. So we clear the vector and start recording
@@ -337,7 +342,6 @@ void videocallback(IplImage *image)
 
       avg_pose_relative_to_robot_marker = calculatePoseRelativeToRobotMarker(robot_marker_pose, avg_pose);     
           
-      std::cout << "Sending robot pose" << std::endl; 
           
       SIMPLE_POSE aktpos = getSimplePose(avg_pose_relative_to_robot_marker);
           
@@ -346,17 +350,50 @@ void videocallback(IplImage *image)
       
       aktpos.type = 1;
 
-      if(start_recording_poses) {
+      if(start_recording_poses == true) {
         recored_poses.insert(recored_poses.begin(), aktpos);
-        if(sendPos2Mobile(app_socket, aktpos) == 32) { // 32 == broken_pipe
-          std::cout << "Connection lost. Reconnecting client...";
-          app_socket = connectSocket(app_socket_handler);
+        
+        if(send_pose_to_app) {
+          std::cout << "Sending pose to app" << std::endl; 
+        
+          if(sendPos(app_socket, aktpos) == 32) { // 32 == broken_pipe
+            std::cout << "Connection lost. Reconnecting client...";
+            app_socket = connectSocket(app_socket_handler);
+          }
         }
       }
-      
-      //cvWaitKey(3000);
     }
 
+    // loop is done and everything is sent. We check the socket for a response from marian
+    // Note: We may NOT be currently recording
+    if(start_recording_poses == false && send_pose_to_robot == true) {
+
+      std::cout << "Checking socket for APP-response." << std::endl;
+
+      int response = checkAppForOkNok(app_socket); // can be 0 || 1 || -1
+      int recorded_poses_size = recored_poses.size();
+      if(response == 0) { // discard line
+        std::cout << recorded_poses_size << " Poses discarded. Waiting 5 sec!";
+        recored_poses.clear();
+        cvWaitKey(5000);
+      } else if(response == 1) { // send line to robot
+        std::cout << "Poses are ok. Sending " << recorded_poses_size << " poses to robot.";
+
+        for(int i = 0; i < recorded_poses_size; i++) {
+          if(sendPos(robot_socket, recored_poses[i]) == 32) { // 32 == broken_pipe
+            std::cout << "Connection lost. Reconnecting client...";
+            robot_socket = connectSocket(robot_socket_handler);
+          }
+        }
+        std::cout << "Sending done. Clearing now!" << std::endl;
+        recored_poses.clear();
+        cvWaitKey(5000);
+    
+      }
+    } else {
+      std::cout << "Omitting socket check cause start_recording_poses is" << start_recording_poses << std::endl;
+    }
+    
     if (flip_image) {
         cvFlip(image);
         image->origin = !image->origin;
@@ -403,11 +440,12 @@ int main(int argc, char *argv[])
         std::cout << "  q: quit" << std::endl;
         std::cout << std::endl;
 
-        if(send_pose) {
+        if(send_pose_to_app) {
           std::cout << "Trying to connect app ..." << std::endl;
           app_socket_handler = createsocket(APP_SOCKET_PORT);
           app_socket = connectSocket(app_socket_handler);
-
+        }
+        if(send_pose_to_robot) {
           std::cout << "Trying to connect robot ..." << std::endl;
           robot_socket_handler = createsocket(ROBOT_SOCKET_PORT);
           robot_socket = connectSocket(robot_socket_handler);

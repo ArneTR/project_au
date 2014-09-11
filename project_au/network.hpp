@@ -38,9 +38,11 @@ using namespace std;
 
 SOCKET createsocket(unsigned int socket_port);
 
-int sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos);
+int sendPos(SOCKET sockfd, SIMPLE_POSE aktpos);
 
 int showNetworkError(const char* error_message);
 
 SOCKET reconnectSocket(SOCKET sock);
+
+int checkAppForOkNok(SOCKET sockfd);
 

@@ -69,7 +69,7 @@ SOCKET connectSocket(SOCKET sock) {
   return new_socket;
 }
 
-int sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos) {        
+int sendPos(SOCKET sockfd, SIMPLE_POSE aktpos) {        
   
   cout << "Pose before sending: " << aktpos.x << ", " << aktpos.y << "," << "," << aktpos.z << " ; " << aktpos.R << "," << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << endl;
 
@@ -95,8 +95,8 @@ int sendPos2Mobile(int sockfd, SIMPLE_POSE aktpos) {
     return showNetworkError("send()");
   }
   else { 
-    delete [] stream_buffer;
     std::cout << "  Daten gesendet:" << stream_buffer << std::endl; 
+    delete [] stream_buffer;
   }
 
   return 0;
@@ -109,4 +109,43 @@ int showNetworkError(const char* error_message) {
   #endif
   perror(error_message);
   return errno; // errno is automagically set
+}
+
+int checkAppForOkNok(SOCKET sockfd) {
+  int stream_buffer_size = sizeof(int);
+          
+  char *stream_buffer = new char[stream_buffer_size];
+
+  fd_set readset;
+  FD_ZERO(&readset);
+  FD_SET(sockfd, &readset);
+  
+  timeval listening_timeout;
+  listening_timeout.tv_sec = 0;
+  listening_timeout.tv_usec = 100;
+ 
+  int marian_response = -1;
+  
+
+  if(select(sockfd + 1, &readset, NULL, NULL, &listening_timeout) > 0) {
+    
+    recv(sockfd, stream_buffer,stream_buffer_size, 0);
+    
+    // cast the buffer to int, since marian sends one int
+    
+    int* stream_data = (int *) stream_buffer;
+
+    //rebuild pose
+    
+    marian_response = (int) ntohl(stream_data[0]);
+
+    std::cout << "Done reading. Marian sent: " << marian_response << std::endl;
+  } else {
+    std::cout << "No data was available on socket in 5 sec" << std::endl;
+  }
+
+  delete [] stream_buffer;
+
+  return -1;
+
 }
