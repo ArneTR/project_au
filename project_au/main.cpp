@@ -81,7 +81,7 @@ int current_brightness = 0;
 
 int last_brightness = 0;
 
-bool start_recording_poses = false;
+bool start_recording_poses = true;
 
 /**
   Globally used containers and variables
@@ -178,6 +178,8 @@ void videocallback(IplImage *image)
 
     bool marker_detected = false;
     bool robot_marker_detected = false;
+
+    if(start_recording_poses) cvCircle(image, cvPoint(630, 10), 3, cvScalar(0,0,255), 10);
 
     /*
       Create a histogram on the original image
