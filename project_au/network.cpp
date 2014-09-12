@@ -35,7 +35,12 @@ SOCKET createsocket(unsigned int socket_port) {
   my_addr.sin_port = htons(socket_port);                    // hier ist der benutzte Port definiert
   my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  int reuseaddr = 1;
+  #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    const char reuseaddr = 1;
+  #else
+    int reuseaddr = 1;
+  
+  #endif
   int err = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
                      &reuseaddr, sizeof(reuseaddr));
 

@@ -30,9 +30,17 @@
 #define Y 1
 #define Z 2
 
-#ifndef socklen_t
-  typedef unsigned int socklen_t;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+  #ifndef socklen_t
+    typedef int socklen_t;
+  #endif
+#else
+  #ifndef socklen_t
+    typedef unsigned int socklen_t;
+  #endif
 #endif
+  
+
 
 using namespace std;
 
