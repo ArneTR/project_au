@@ -170,8 +170,8 @@ void markTip(IplImage *image, Camera cam, Pose avg_pose) {
   cvCircle(image, projected_point, 5, cvScalar(0,255,0), 1);
 }
 
-void showPoseCoordinates(IplImage* image, Camera cam, Pose current_pose, SIMPLE_POSE aktpos) {
-  CvPoint3D32f point = cvPoint3D32f(aktpos.x, aktpos.y, aktpos.z);
+void showPoseCoordinates(IplImage* image, Camera cam, Pose current_pose, int x, int y, int z) {
+  CvPoint3D32f point = cvPoint3D32f(0,0,0);
     
   CvPoint2D32f point_2d;
 
@@ -180,7 +180,7 @@ void showPoseCoordinates(IplImage* image, Camera cam, Pose current_pose, SIMPLE_
   CvPoint point_2d_projected = cvPointFrom32f(point_2d);
 
   char text[256];
-  sprintf(text, "Pos: %d, %d, %d", (int) aktpos.x, (int) aktpos.y, (int) aktpos.z);
+  sprintf(text, "Pos: %d, %d, %d", x, y, z);
 
   CvFont font;
   cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5);
