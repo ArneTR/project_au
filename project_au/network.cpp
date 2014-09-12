@@ -39,8 +39,8 @@ SOCKET createsocket(unsigned int socket_port) {
     const char reuseaddr = 1;
   #else
     int reuseaddr = 1;
-  
   #endif
+
   int err = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
                      &reuseaddr, sizeof(reuseaddr));
 
