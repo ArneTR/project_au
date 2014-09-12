@@ -35,6 +35,10 @@ SOCKET createsocket(unsigned int socket_port) {
   my_addr.sin_port = htons(socket_port);                    // hier ist der benutzte Port definiert
   my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+  int reuseaddr = 1;
+  int err = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+                     &reuseaddr, sizeof(reuseaddr));
+
   //Socket mit Port assoziieren (Bind)
   if (bind(sockfd, (sockaddr *)&my_addr, sizeof(sockaddr)) == -1)  {
     showNetworkError ("bind()");
