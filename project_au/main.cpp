@@ -65,7 +65,7 @@ bool show_single_pose = true;
 
 bool send_pose_to_app = true;
 
-bool send_pose_to_robot = true;
+bool send_pose_to_robot = false;
 
 bool show_average_pose = true;
 
@@ -95,7 +95,6 @@ Camera cam;
 
 Drawable d[32];
 
-std::stringstream calibrationFilename;
 
 SOCKET app_socket_handler = -1;
 SOCKET app_socket = -1;
@@ -104,14 +103,19 @@ SOCKET robot_socket_handler = -1;
 SOCKET robot_socket = -1;
 
 
+string calibrationFilename = "camera_calibration_microsoft_hd5000_highgui.xml";
+
+
 void calibrate(IplImage *image) {
     static IplImage *rgba;
-    std::cout<<"Loading calibration: "<<calibrationFilename.str();
-    if (cam.SetCalib(calibrationFilename.str().c_str(), image->width, image->height)) {
+    
+    std::cout << "Loading calibration: " << calibrationFilename;
+    if (cam.SetCalib(calibrationFilename.c_str(), image->width, image->height)) {
         std::cout<<" [Ok]"<<std::endl;
     } else {
         cam.SetRes(image->width, image->height);
         std::cout<<" [Fail]"<<std::endl;
+        exit(-1);
     }
     double p[16];
     cam.GetOpenglProjectionMatrix(p,image->width,image->height);
@@ -364,6 +368,7 @@ void videocallback(IplImage *image)
       }
     }
 
+
     // loop is done and everything is sent. We check the socket for a response from marian
     // Note: We may NOT be currently recording
     if(start_recording_poses == false && send_pose_to_robot == true) {
@@ -380,6 +385,7 @@ void videocallback(IplImage *image)
         std::cout << "Poses are ok. Sending " << recorded_poses_size << " poses to robot.";
 
         for(int i = 0; i < recorded_poses_size; i++) {
+          if(i == (recorded_poses_size-1)) recored_poses[i].type = 0;
           if(sendPos(robot_socket, recored_poses[i]) == 32) { // 32 == broken_pipe
             std::cout << "Connection lost. Reconnecting client...";
             robot_socket = connectSocket(robot_socket_handler);
@@ -391,7 +397,7 @@ void videocallback(IplImage *image)
     
       }
     } else {
-      std::cout << "Omitting socket check cause start_recording_poses is" << start_recording_poses << std::endl;
+      std::cout << "Omitting socket check cause start_recording_poses is: " << start_recording_poses << std::endl;
     }
     
     if (flip_image) {
@@ -443,11 +449,13 @@ int main(int argc, char *argv[])
         if(send_pose_to_app) {
           std::cout << "Trying to connect app ..." << std::endl;
           app_socket_handler = createsocket(APP_SOCKET_PORT);
+          if(app_socket_handler == -1) exit(-1);
           app_socket = connectSocket(app_socket_handler);
         }
         if(send_pose_to_robot) {
           std::cout << "Trying to connect robot ..." << std::endl;
           robot_socket_handler = createsocket(ROBOT_SOCKET_PORT);
+          if(robot_socket_handler == -1) exit(-1);
           robot_socket = connectSocket(robot_socket_handler);
         } 
 
@@ -509,7 +517,6 @@ int main(int argc, char *argv[])
         if (cap) {
             std::stringstream settingsFilename;
             settingsFilename << "camera_settings_" << uniqueName << ".xml";
-            calibrationFilename << "camera_calibration_" << uniqueName << ".xml";
             
             cap->start();
             cap->setResolution(640, 480);
