@@ -37,7 +37,8 @@ SOCKET createsocket(unsigned int socket_port) {
 
   //Socket mit Port assoziieren (Bind)
   if (bind(sockfd, (sockaddr *)&my_addr, sizeof(sockaddr)) == -1)  {
-    return showNetworkError ("bind()");
+    showNetworkError ("bind()");
+    return -1;
   } else {
     cout << "Bind to port " << socket_port << " successful. Waiting for client ..." << endl;
   }
