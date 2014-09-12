@@ -33,7 +33,7 @@
   #define MARKER_WHITE_MARGIN 6.0
 
   #define ROBOT_MARKER 0
-  #define ROBOT_MARKER_SIZE 103.0
+  #define ROBOT_MARKER_SIZE 124.0
 
   #define TIME_AVERAGE_POSES 5.0
 
