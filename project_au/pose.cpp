@@ -107,8 +107,7 @@ Pose calculatePoseRelativeToRobotMarker(Pose robot_marker_pose, Pose p) {
     CvMat *result = cvCreateMat(4,4, CV_64FC1);
 
     // Calculate inverse to get 0->Cam1 from Cam1->0
-    cvInv(robot_marker_matrix, inv_robot_marker_matrix, CV_LU);
-
+    cvInv(robot_marker_matrix, inv_robot_marker_matrix, CV_SVD);
 
     // now calcualte 0->Cam1 * C1->M = 0->M
     cvMatMul(inv_robot_marker_matrix, pose_matrix, result);
