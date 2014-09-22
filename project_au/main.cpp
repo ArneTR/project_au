@@ -36,7 +36,7 @@ using namespace alvar;
   Changeable attributes
 */
 
-bool initial_calibrate = true; // will load calibration XML file
+bool initial_calibrate = false; // will load calibration XML file
 
 bool activate_glutviewer = true; // will open two additional windows showing detected markers in cartesian space
 
@@ -48,7 +48,7 @@ bool send_pose_to_robot = false;
 
 bool show_average_pose = true;
 
-bool show_roi = true;
+bool show_roi = false;
 
 /**
   NON-Changeable attributes. These are in-program set flags.
@@ -112,7 +112,66 @@ void calibrate(IplImage *image) {
 
 void videocallback(IplImage *image)
 {
+
+/** DEGBU CODE FOR ROTATION MATRICES
+    Pose tip_pose;
+    tip_pose.Reset();
+
+    int id = 187;
     
+    if(id == 255) { // top_marker
+      tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
+        0, 
+        0,
+        - (MARKER_WHITE_MARGIN) -(MARKER_SIZE/2) - (PENCIL_LENGTH) 
+      );
+    } else {
+      tip_pose.SetTranslation( // set the target translation (only valid for side-markers)
+        0, 
+        PENCIL_LENGTH,
+        -(MARKER_SIZE/2) - (MARKER_WHITE_MARGIN)
+      );
+    }
+
+    // now we rotate the marker 90 degrees
+    CvMat *euler_matrix = cvCreateMat(3, 1, CV_64FC1);
+    tip_pose.GetEuler(euler_matrix);
+
+    //cout << "Current euler:" << cvmGet(euler_matrix,0,0) << " ; " << cvmGet(euler_matrix,1,0) << " ; " << cvmGet(euler_matrix,2,0) << endl; 
+
+    if(id == 255) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) + 180.0); // flip 180 degrees (only valid for top marker)
+      cvmSet(euler_matrix, 1, 0, -cvmGet(euler_matrix,1,0)); // flip 180 degrees (only valid for top marker) // green y axis
+      cvmSet(euler_matrix, 2, 0, -cvmGet(euler_matrix,2,0)); // flip 180 degrees (only valid for top marker)
+    } else if(id == 187) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    } else if(id == 176) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) - 180.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    } else if(id == 68) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) - 0.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    } else if(id == 79) {
+      cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) + 90.0); // rotate 90 degrees (only valid for side markers)
+      cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) - 90.0); // rotate 90 degrees (only valid for side markers)
+    }
+
+    //cout << "Shifted euler:" << cvmGet(euler_matrix,0,0) << " ; " << cvmGet(euler_matrix,1,0) << " ; " << cvmGet(euler_matrix,2,0) << endl; 
+
+
+    tip_pose.SetEuler(euler_matrix);
+
+    CvMat *tip_matrix = cvCreateMat(4, 4, CV_64FC1);
+    tip_pose.GetMatrix(tip_matrix); // get current tip matrix (should be empty after reset)
+
+    std::cout << cvmGet(tip_matrix,0,0) << " | " << cvmGet(tip_matrix,0,1) << " | " << cvmGet(tip_matrix,0,2) << " | " << cvmGet(tip_matrix,0,3) << std::endl;
+    std::cout << cvmGet(tip_matrix,1,0) << " | " << cvmGet(tip_matrix,1,1) << " | " << cvmGet(tip_matrix,1,2) << " | " << cvmGet(tip_matrix,1,3) << std::endl;
+    std::cout << cvmGet(tip_matrix,2,0) << " | " << cvmGet(tip_matrix,2,1) << " | " << cvmGet(tip_matrix,2,2) << " | " << cvmGet(tip_matrix,2,3) << std::endl;
+    std::cout << cvmGet(tip_matrix,3,0) << " | " << cvmGet(tip_matrix,3,1) << " | " << cvmGet(tip_matrix,3,2) << " | " << cvmGet(tip_matrix,3,3) << std::endl;
+    
+    exit(-1);
+    */
 
     bool flip_image = (image->origin?true:false);
     if (flip_image) {
@@ -186,6 +245,7 @@ void videocallback(IplImage *image)
       std::cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << std::endl;
 
       if(isPencilMarker(id)) {
+        
         current_brightness = createROI(
           show_roi // determine if value is written to image. Calculation is done always!
           , image
@@ -201,8 +261,6 @@ void videocallback(IplImage *image)
 
         std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
         if(last_brightness > 0 && current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) {
-         std::cout << "Detected swap!!!!!!!!!!!!!!!!!!!" << std::endl;
-         cvWaitKey(500);
          if(start_recording_poses == true) { // it was true before, so we stop
            start_recording_poses = false;
          } else { // it was false before. So we clear the vector and start recording
@@ -212,7 +270,8 @@ void videocallback(IplImage *image)
         }
 
         last_brightness = current_brightness;
-      
+
+
         if(marker_detected) { // we found at least one marker before, so we must average. This is multi-marker averaging!
           
           SIMPLE_POSE simple_temp_pose = getSimplePose(calculateTipPose(current_pose, id));
@@ -254,6 +313,7 @@ void videocallback(IplImage *image)
       }
     } // end loop markers
 
+ 
     SIMPLE_POSE sp2 = getSimplePose(avg_pose);
 
     std::cout << "Current Translation of AVG-marker in relation to cam is (X,Y,Z): (" << sp2.x << ", " << sp2.y << ", " << sp2.z << ")" << std::endl;
@@ -307,6 +367,7 @@ void videocallback(IplImage *image)
       }
     }
 
+     SIMPLE_POSE avg_simple_pose;
     
 
     if(show_average_pose && marker_detected) {
@@ -314,6 +375,13 @@ void videocallback(IplImage *image)
       showPose(10, 0, avg_pose, d);
 
       markTip(image, cam, avg_pose);
+
+      avg_simple_pose = getSimplePose(avg_pose);
+
+      //showPoseCoordinates(image, cam, avg_pose, avg_simple_pose.x, avg_simple_pose.y, avg_simple_pose.z); // show av2r coords but ON average pose!!!
+
+
+      
 
     }
 
@@ -325,14 +393,15 @@ void videocallback(IplImage *image)
       Pose avg_pose_relative_to_robot_marker;
       avg_pose_relative_to_robot_marker.Reset();
 
-      avg_pose_relative_to_robot_marker = calculatePoseRelativeToRobotMarker(robot_marker_pose, avg_pose);     
-          
+      avg_pose_relative_to_robot_marker = calculatePoseRelativeToRobotMarker(robot_marker_pose, avg_pose);   
           
       SIMPLE_POSE aktpos = getSimplePose(avg_pose_relative_to_robot_marker);
           
       std::cout << "Current Translation of robot pose is (X,Y,Z): (" << aktpos.x << ", " << aktpos.y << ", " << aktpos.z << ")" << std::endl;
       std::cout << "Current Quaternion of robot marker in relation to cam is (R, i1, i2, i3) : (" << (aktpos.R ) << ", " << aktpos.i1 << ", " << aktpos.i2 << ", " << aktpos.i3 << ")" << std::endl;
       
+      showPoseCoordinates(image, cam, avg_pose, aktpos.x, aktpos.y, aktpos.z); // show av2r coords but ON average pose!!!
+
       aktpos.type = 1;
 
       if(start_recording_poses == true) {
@@ -345,6 +414,7 @@ void videocallback(IplImage *image)
             std::cout << "Connection lost. Reconnecting client...";
             app_socket = connectSocket(app_socket_handler);
           }
+          
         }
       }
     }
