@@ -36,19 +36,21 @@ using namespace alvar;
   Changeable attributes
 */
 
-bool initial_calibrate = false; // will load calibration XML file
+bool initial_calibrate = true; // will load calibration XML file
 
 bool activate_glutviewer = true; // will open two additional windows showing detected markers in cartesian space
 
 bool show_single_pose = true;
 
-bool send_pose_to_app = true;
+bool send_pose_to_app = false;
+
+bool send_pose_to_watcher = false;
 
 bool send_pose_to_robot = false;
 
 bool show_average_pose = true;
 
-bool show_roi = false;
+bool show_roi = true;
 
 /**
   NON-Changeable attributes. These are in-program set flags.
@@ -60,7 +62,7 @@ int current_brightness = 0;
 
 int last_brightness = 0;
 
-bool start_recording_poses = true;
+bool start_recording_poses = false;
 
 /**
   Globally used containers and variables
@@ -81,6 +83,8 @@ SOCKET app_socket = -1;
 SOCKET robot_socket_handler = -1;
 SOCKET robot_socket = -1;
 
+SOCKET watcher_socket_handler = -1;
+SOCKET watcher_socket = -1;
 
 string calibrationFilename = "camera_calibration_microsoft_hd5000_highgui.xml";
 
@@ -246,31 +250,33 @@ void videocallback(IplImage *image)
 
       if(isPencilMarker(id)) {
         
-        current_brightness = createROI(
-          show_roi // determine if value is written to image. Calculation is done always!
-          , image
-          , cam
-          , current_pose
-          , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
-          , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_y
-          , 0 // p1_z
-          , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
-          , MARKER_SIZE + MARKER_WHITE_MARGIN // p2_y
-          ,0 //p2_z
-        );
+        // TODO: Make working for all markers
+        if(id == 79) { // for debug purposes we currently accept brightness swap only for one marker!!!!
+          current_brightness = createROI(
+            show_roi // determine if value is written to image. Calculation is done always!
+            , image
+            , cam
+            , current_pose
+            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
+            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_y
+            , 0 // p1_z
+            , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
+            , MARKER_SIZE + MARKER_WHITE_MARGIN // p2_y
+            ,0 //p2_z
+          );
 
-        std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
-        if(last_brightness > 0 && current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) {
-         if(start_recording_poses == true) { // it was true before, so we stop
-           start_recording_poses = false;
-         } else { // it was false before. So we clear the vector and start recording
-           start_recording_poses = true;
-           recored_poses.clear();
-         }
+          std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
+          if(last_brightness > 0 && current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) {
+           if(start_recording_poses == true) { // it was true before, so we stop
+             start_recording_poses = false;
+           } else { // it was false before. So we clear the vector and start recording
+             start_recording_poses = true;
+             recored_poses.clear();
+           }
+          }
+
+          last_brightness = current_brightness;
         }
-
-        last_brightness = current_brightness;
-
 
         if(marker_detected) { // we found at least one marker before, so we must average. This is multi-marker averaging!
           
@@ -417,6 +423,16 @@ void videocallback(IplImage *image)
           
         }
       }
+
+      if(send_pose_to_watcher) {
+        std::cout << "Sending pose to watcher" << std::endl; 
+      
+        if(sendPos(watcher_socket, aktpos) == 32) { // 32 == broken_pipe
+          std::cout << "Connection lost. Reconnecting client...";
+          app_socket = connectSocket(watcher_socket_handler);
+        }
+        
+      }
     }
 
 
@@ -508,6 +524,12 @@ int main(int argc, char *argv[])
           robot_socket_handler = createsocket(ROBOT_SOCKET_PORT);
           if(robot_socket_handler == -1) exit(-1);
           robot_socket = connectSocket(robot_socket_handler);
+        } 
+        if(send_pose_to_watcher) {
+          std::cout << "Trying to connect watcher ..." << std::endl;
+          watcher_socket_handler = createsocket(WATCHER_SOCKET_PORT);
+          if(watcher_socket_handler == -1) exit(-1);
+          watcher_socket = connectSocket(watcher_socket_handler);
         } 
 
         // Initialise GlutViewer and CvTestbed
