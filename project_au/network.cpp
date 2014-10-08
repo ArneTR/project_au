@@ -156,6 +156,6 @@ int checkAppForOkNok(SOCKET sockfd) {
 
   delete [] stream_buffer;
 
-  return -1;
+  return marian_response;
 
 }
