@@ -1,0 +1,12 @@
+
+- Checkout "correctMatches" function. Seems to give better point between two points http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#correctmatches
+
+- Mal die HR Marker abchecken
+
+- Es muss eine Lösung für den Flip der Achsen gefunden werden. Entweder also eine Art "Entprellen" mit dem häufigsten Wert aus 3 Messungen. Oder man findet eine logisch Schlussfolgerung, dass die Achse NIE nach innen zeigen kann, da die Kamera ja immer auf den Marker gucken muss und nicht durch Ihn hindurch.
+
+- ROI ist nicht korrekt implementiert
+
+- Markersize is 53mm or 37mm depending on if you count margin or not
+
+- cv::waitKey(waitTime) wartet immer 10 ms pro Frame. Diese könnte man ggf runtersetzen um die Performance zu erhöhen.

@@ -1,0 +1,17 @@
+/home/roboto/Downloads/aruco-1.2.5/build/src/CMakeFiles/aruco.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_board_pix2meters.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_calibration.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_create_board.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_create_marker.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils_hrm/CMakeFiles/aruco_hrm_create_board.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils_hrm/CMakeFiles/aruco_hrm_create_dictionary.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils_hrm/CMakeFiles/aruco_hrm_test.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils_hrm/CMakeFiles/aruco_hrm_test_board.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_selectoptimalmarkers.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_simple.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_simple_board.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_test.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_test_board.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_test_board_gl.dir
+/home/roboto/Downloads/aruco-1.2.5/build/utils/CMakeFiles/aruco_test_gl.dir
+/home/roboto/Downloads/aruco-1.2.5/build/CMakeFiles/uninstall.dir
