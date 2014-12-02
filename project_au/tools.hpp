@@ -22,24 +22,25 @@
   #define ROBOT_SOCKET_PORT 11114
   #define WATCHER_SOCKET_PORT 11115
 
-  #define PENCIL_LENGTH 146.0 // should be 146.0 later on
+  #define PENCIL_LENGTH 235.0 // should be 146.0 later on
 
-  #define MARKER_SIZE 38.0 // mm
+  // always use marker sizes in edge_length consisting of white inner pixels + black margin
+  #define MARKER_SIZE 45.0 // mm  32 vs. 45
   
   #define MARKER_RESOLUTION 5
-  #define MARKER_BLACK_MARGIN_RESOLUTION 2.0
-  #define MARKER_BLACK_MARGIN 8.0
+  #define MARKER_BLACK_MARGIN_RESOLUTION 1.0
+  #define MARKER_BLACK_MARGIN 6.5
 
-  #define MARKER_WHITE_MARGIN_RESOLUTION 2.0
-  #define MARKER_WHITE_MARGIN 8.0
+  #define MARKER_WHITE_MARGIN_RESOLUTION 1.0
+  #define MARKER_WHITE_MARGIN 6.0
 
   #define ROBOT_MARKER 0
-  #define ROBOT_MARKER_SIZE 38.0
+  #define ROBOT_MARKER_SIZE 62.0 // mm
   
 
   #define TIME_AVERAGE_POSES 5.0
 
-  #define BRIGHTNESS_MARGIN 40
+  #define BRIGHTNESS_MARGIN 30
 #endif
 
 SIMPLE_POSE getSimplePose(Pose p);
