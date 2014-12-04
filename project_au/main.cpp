@@ -42,11 +42,11 @@ bool activate_glutviewer = true; // will open two additional windows showing det
 
 bool show_single_pose = true;
 
-bool send_pose_to_app = true;
+bool send_pose_to_app = false;
 
 bool send_pose_to_watcher = false;
 
-bool send_pose_to_robot = true;
+bool send_pose_to_robot = false;
 
 bool show_average_pose = true;
 
@@ -269,7 +269,6 @@ void videocallback(IplImage *image)
            start_recording_poses = false;
          } else { // it was false before. So we clear the vector and start recording
            start_recording_poses = true;
-           recored_poses.clear();
          }
         }
 
