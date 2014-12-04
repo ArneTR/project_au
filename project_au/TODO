@@ -1,0 +1,28 @@
+TODO:
+
+- Mittelung der Helligkeitswerte springt zu stark wenn mehere Marker erkannt werden und dann nur noch einer!!
+Mittelung!!! Oder ROI pro Marker!!!
+
+
+- Dokumentation neuer Variab
+
+- Wahrscheinlich kommt dieses Zittern durch den Flip der Achsen!!!!!
+
+Dokumentation:
+- Wie genau ist ALVAR, wie genau ist ArUCO. EInmal verschiebung entlang einer Achse. Einmal den Fehler in den Ecken für die Verschiebungsmatrix robot2pencil. Wie stark schwanken da die Werte. Vier fixe Raumpositionen.
+
+
+- Der Marker 255 ist aktuell in der tools.cpp entfernt, da die Drehung nicht passt. Bitte wieder einabeun
+
+- Aktuell wird nur für den Marker 79 eine ROI gebaut. es kommt zu falschen Sprüngen, falls die ROI wechselt oder gemittelt wird.
+
+- nach umschalten der ROI. 40 frames umschaltepause
+
+- Puffer nur löschen wenn ROI wirklich verloren ist, sprich der Record modus ist 10 sec aus oder so ...
+
+- Dokumentation prüfen y-Achse falsch rum
+
+- Ausblick der Ilona ergänzen. In einem Pick&Place Szenario könnte mna statt start und stop für eine Aufzeichnung auch eine Send-per-Point lösung implementieren, welche nur da nn sendet, wen nder Stift auch wirklic hdas sLichstignale eingeschaltet.
+Technisch bietet dies höhere Anforderungen an einen "Zeit-Timeout" und die Handsatabilitöt des Anwenders
+
+- Windows code marian: Modus raus für die ROI Erkennung + Robot kein Connect + Recording poses immer auf true
