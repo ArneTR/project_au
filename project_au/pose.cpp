@@ -51,8 +51,8 @@ Pose calculateTipPose(Pose p, int id) {
 
     if(id == 255) {
       cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0)); // flip 180 degrees (only valid for top marker)
-      cvmSet(euler_matrix, 1, 0, -cvmGet(euler_matrix,1,0)  + 180.0); // flip 180 degrees (only valid for top marker) // green y axis
-      cvmSet(euler_matrix, 2, 0, -cvmGet(euler_matrix,2,0)); // flip 180 degrees (only valid for top marker)
+      cvmSet(euler_matrix, 1, 0, -cvmGet(euler_matrix,1,0) + 90.0); // flip 180 degrees (only valid for top marker) // green y axis
+      cvmSet(euler_matrix, 2, 0, -cvmGet(euler_matrix,2,0) + 180.0); // flip 180 degrees (only valid for top marker)
     } else if(id == 187) {
       cvmSet(euler_matrix, 0, 0, cvmGet(euler_matrix,0,0) - 90.0); // rotate 90 degrees (only valid for side markers)
       cvmSet(euler_matrix, 2, 0, cvmGet(euler_matrix,2,0) + 90.0); // rotate 90 degrees (only valid for side markers)
