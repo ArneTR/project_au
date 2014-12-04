@@ -35,3 +35,12 @@ bool isPencilMarker(int id) {
   if(id == 68 || id == 79 || id == 176 || id == 187 || id == 255 ) return true;
   else return false;
 }
+
+bool toggle(bool value) {
+  if(value == true) { // it was true before, so we stop
+     value = false;
+   } else { // it was false before. So we clear the vector and start recording
+     value = true;
+   }
+   return value;
+}

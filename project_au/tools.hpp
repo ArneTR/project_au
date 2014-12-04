@@ -40,7 +40,7 @@
 
   #define TIME_AVERAGE_POSES 5.0
 
-  #define BRIGHTNESS_MARGIN 30
+  #define BRIGHTNESS_MARGIN 70
 #endif
 
 SIMPLE_POSE getSimplePose(Pose p);

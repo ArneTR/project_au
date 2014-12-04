@@ -27,6 +27,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <vector>
+#include <map>
 
 
 
@@ -58,9 +59,9 @@ bool show_roi = true;
   DO NOT TAMPER!
 */
 
-int current_brightness = 0;
+double current_brightness = 0;
 
-int last_brightness = 0;
+double last_brightness = 0;
 
 bool start_recording_poses = false;
 
@@ -71,6 +72,10 @@ bool start_recording_poses = false;
 std::vector<SIMPLE_POSE> average_poses;
 
 std::vector<SIMPLE_POSE> recored_poses;
+
+
+std::map<int,double> current_roi_map;
+std::map<int,double> last_roi_map;
 
 Camera cam;
 
@@ -85,6 +90,8 @@ SOCKET robot_socket = -1;
 
 SOCKET watcher_socket_handler = -1;
 SOCKET watcher_socket = -1;
+
+int recording_toggle_timeout = 30; // always wait at least 30 frames detections before next toogle 
 
 string calibrationFilename = "camera_calibration_microsoft_hd5000_highgui.xml";
 
@@ -111,7 +118,6 @@ void calibrate(IplImage *image) {
 
     initial_calibrate = false;
 }
-
 
 
 void videocallback(IplImage *image)
@@ -212,11 +218,16 @@ void videocallback(IplImage *image)
 
     if(activate_glutviewer) GlutViewer::DrawableClear();
 
+    if(recording_toggle_timeout > 0) recording_toggle_timeout--; // decrement timeout
+
     Pose avg_pose;
     avg_pose.Reset(); // fresh start
 
     Pose robot_marker_pose;
     robot_marker_pose.Reset();
+
+    current_roi_map.clear();
+
 
     bool marker_detected = false;
     bool robot_marker_detected = false;
@@ -227,6 +238,8 @@ void videocallback(IplImage *image)
       Create a histogram on the original image
     */
     if(show_roi) showHistogram(show_roi, image, cvPoint(0,15), 1, 1);
+
+
     
 
     // Start the marker detection loop
@@ -248,32 +261,36 @@ void videocallback(IplImage *image)
       std::cout << "Current Translation of marker " << id << " in relation to cam is (X,Y,Z): (" << sp.x << ", " << sp.y << ", " << sp.z << ")" << std::endl;
       std::cout << "Current Quaternion of marker " << id <<  " in relation to cam is (R, i1, i2, i3) : (" << sp.R << ", " << sp.i1 << ", " << sp.i2 << ", " << sp.i3 << ")" << std::endl;
 
+
       if(isPencilMarker(id)) {
         
-        current_brightness = createROI(
-          show_roi // determine if value is written to image. Calculation is done always!
-          , image
-          , cam
-          , current_pose
-          , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
-          , - MARKER_SIZE/2 - MARKER_WHITE_MARGIN // p1_y
-          , 0 // p1_z
-          , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
-          , - MARKER_SIZE - MARKER_WHITE_MARGIN // p2_y
-          ,0 //p2_z
-        );
+        if(recording_toggle_timeout == 0) {
+          current_roi_map[id] = createROI(
+            show_roi // determine if value is written to image. Calculation is done always!
+            , image
+            , cam
+            , current_pose
+            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
+            , - MARKER_SIZE/2 - MARKER_WHITE_MARGIN // p1_y
+            , 0 // p1_z
+            , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
+            , - MARKER_SIZE - MARKER_WHITE_MARGIN // p2_y
+            ,0 //p2_z
+          );
 
-        std::cout << "Current brightness: " << current_brightness << " last brightness " << last_brightness << std::endl;
-        if(last_brightness > 0 && current_brightness > (last_brightness + BRIGHTNESS_MARGIN)) {
-         if(start_recording_poses == true) { // it was true before, so we stop
-           start_recording_poses = false;
-         } else { // it was false before. So we clear the vector and start recording
-           start_recording_poses = true;
-         }
+          std::cout << "Current brightness of marker: " << id << " is " << current_roi_map[id];
+          if(last_roi_map.count(id)) {
+            std::cout << " - Last brightness of element was " << last_roi_map[id] << std::endl;
+            if(last_roi_map[id] > 0 && current_roi_map[id] > (last_roi_map[id] + BRIGHTNESS_MARGIN)) {
+              start_recording_poses = toggle(start_recording_poses);
+              recording_toggle_timeout = 30; // set toggle timeout to 30 frames
+            }
+          } else {
+            std::cout << " - Element did not have historic value " << std::endl;
+          }
+        } else {
+          cvCircle(image, cvPoint(620, 10), 3, cvScalar(0,255,255), 10);
         }
-
-        last_brightness = current_brightness;
-      
 
         if(marker_detected) { // we found at least one marker before, so we must average. This is multi-marker averaging!
           
@@ -315,6 +332,10 @@ void videocallback(IplImage *image)
         std::cout << "Detected ROBOT_MARKER (id:" << ROBOT_MARKER << ")!" << std::endl;
       }
     } // end loop markers
+
+    // transport the current_roi values to the history buffer
+    last_roi_map.clear();
+    last_roi_map = current_roi_map;
 
  
     SIMPLE_POSE sp2 = getSimplePose(avg_pose);
@@ -412,7 +433,7 @@ void videocallback(IplImage *image)
         
         if(send_pose_to_app) {
           std::cout << "Sending pose to app" << std::endl; 
-        
+          cvCircle(image, cvPoint(630, 470), 3, cvScalar(255,0,255), 10);
           if(sendPos(app_socket, aktpos) == 32) { // 32 == broken_pipe
             std::cout << "Connection lost. Reconnecting client...";
             app_socket = connectSocket(app_socket_handler);
