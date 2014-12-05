@@ -6,19 +6,37 @@ double showHistogram(bool show_roi, IplImage* image, CvPoint point, int x_l, int
     IplImage* copy_img = cvCloneImage(image);
     
     // create an image with only onee color channel
-    IplImage* img_grayscale = cvCreateImage(cvSize(copy_img->width,copy_img->height), copy_img->depth, 1);
+    IplImage* img_grayscale = cvCreateImage(cvGetSize(copy_img), copy_img->depth, 1);
+    IplImage* roi = cvCreateImage(cvGetSize(copy_img), copy_img->depth, 1);
+    IplImage* res = cvCreateImage(cvGetSize(copy_img), copy_img->depth, 1);
 
     cvCvtColor(copy_img, img_grayscale, CV_RGB2GRAY);
 
-    if( (point.x) >= image->width || (point.y) >= image->height) {
+    int radius = 0;
+    if(x_l > y_l) radius = x_l;
+    else radius = y_l;
+    if( (point.x-radius) >= image->width || (point.y-radius) >= image->height
+      ||
+      (point.x-radius) <= 0 || (point.y-radius) <= 0
+    ) {
       cout << "--------- WARNING: OUT OF BOUNDS FOR ROI" << endl;
       return 0.0;
     }
 
-    if(x_l != 0 && y_l != 0) {
-      cout << "Setting roi to " << point.x << ":" << point.y << " with length " << x_l << ":" << y_l << " in image " << image->width << ":" << image->height << endl;
-      cvSetImageROI(img_grayscale, cvRect(point.x, point.y, x_l, y_l));
-    }
+    cvZero(roi);
+    
+    cvCircle(
+        roi,
+        point,
+        radius,
+        CV_RGB(255, 255, 255),
+        -1, 8, 0
+    );
+
+    /* extract subimage */
+    cvAnd(img_grayscale, img_grayscale, res, roi);
+    
+    cvSetImageROI(res, cvRect(point.x-radius, point.y-radius,radius*2,radius*2));
 
     int histSize = 256;
 
@@ -32,9 +50,9 @@ double showHistogram(bool show_roi, IplImage* image, CvPoint point, int x_l, int
 
     img_hist =  cvCreateHist(1, &histSize, CV_HIST_ARRAY, histRange, 1);
     
-    cvCalcHist( &img_grayscale, img_hist, accumulate, NULL );
+    cvCalcHist( &res, img_hist, accumulate, NULL );
 
-    double mean_brightness = cvMean(img_grayscale);
+    double mean_brightness = cvMean(res);
     
     cout << "Having mean of grayscale values of: " << mean_brightness << endl;
 
@@ -52,10 +70,13 @@ double showHistogram(bool show_roi, IplImage* image, CvPoint point, int x_l, int
         &font, 
         cvScalar(127,255,0) // green
       );
+      cvShowImage("ROI",res);
     }
 
     //free memory. otherwise program will crash after some time with memory hole
     cvReleaseImage(&img_grayscale);
+    cvReleaseImage(&res);
+    cvReleaseImage(&roi);
     cvReleaseImage(&copy_img);
 
     return mean_brightness;
@@ -76,9 +97,6 @@ double createROI(bool show_roi, IplImage* image, Camera cam, Pose current_pose, 
 
     CvPoint corner_top_left_x_2d_projected = cvPointFrom32f(corner_top_left_x_2d);
     CvPoint corner_bottom_right_2d_projected = cvPointFrom32f(corner_bottom_right_2d);
-    
-    if(show_roi) cvRectangle(image,corner_top_left_x_2d_projected, corner_bottom_right_2d_projected, CV_RGB(255,255,0));
-
    
     
     return showHistogram(

@@ -47,6 +47,7 @@ bool send_pose_to_app = false;
 
 bool send_pose_to_watcher = false;
 
+
 bool send_pose_to_robot = false;
 
 bool show_average_pose = true;
@@ -270,11 +271,11 @@ void videocallback(IplImage *image)
             , image
             , cam
             , current_pose
-            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p1_x
-            , - MARKER_SIZE/2 - MARKER_WHITE_MARGIN // p1_y
+            ,  0 // p1_x
+            ,  - MARKER_SIZE/2 - MARKER_WHITE_MARGIN*2 // p1_y
             , 0 // p1_z
-            , -(MARKER_SIZE)/2 - MARKER_WHITE_MARGIN // p2_x
-            , - MARKER_SIZE - MARKER_WHITE_MARGIN // p2_y
+            , MARKER_SIZE/2 + MARKER_WHITE_MARGIN // p2_x
+            , - MARKER_SIZE/2 - MARKER_WHITE_MARGIN*5 // p2_y
             ,0 //p2_z
           );
 
@@ -554,7 +555,7 @@ int main(int argc, char *argv[])
         if(activate_glutviewer) GlutViewer::Start(argc, argv, 640, 480);
         
         CvTestbed::Instance().SetVideoCallback(videocallback);
-
+        if(show_roi) cvNamedWindow( "ROI", CV_WINDOW_AUTOSIZE );  
         // Create capture object from camera (argv[1] is a number) or from file (argv[1] is a string)
         Capture *cap;
         std::string uniqueName;
